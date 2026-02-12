@@ -5,7 +5,7 @@
  * @format
  */
 
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme, View, BackHandler, Alert } from 'react-native';
 import {
   SafeAreaProvider,
 } from 'react-native-safe-area-context';
@@ -72,8 +72,51 @@ function AppContent() {
   // Check if user is logged in on app start
   useEffect(() => {
     checkLoginStatus();
-    // Firebase initialization moved to when needed
+    // Initialize Firebase notifications safely
+    setTimeout(() => {
+      firebaseService.initializeNotifications();
+    }, 1000); // Delay to ensure Firebase is fully initialized
   }, []);
+
+  // Handle back button press
+  useEffect(() => {
+    const backAction = () => {
+      // If user is not logged in, allow default back behavior (exit app)
+      if (!isLoggedIn) {
+        return false;
+      }
+
+      // If on dashboard, show exit confirmation
+      if (currentScreen === 'dashboard') {
+        Alert.alert(
+          'Exit App',
+          'Are you sure you want to exit?',
+          [
+            {
+              text: 'Cancel',
+              onPress: () => null,
+              style: 'cancel',
+            },
+            {
+              text: 'Exit',
+              onPress: () => BackHandler.exitApp(),
+              style: 'destructive',
+            },
+          ],
+          { cancelable: false }
+        );
+        return true; // Prevent default back behavior
+      }
+
+      // For all other screens, navigate back to dashboard
+      setCurrentScreen('dashboard');
+      return true; // Prevent default back behavior
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, [isLoggedIn, currentScreen]);
 
   
   const checkLoginStatus = async () => {
