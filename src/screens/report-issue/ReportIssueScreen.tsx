@@ -68,6 +68,16 @@ const ReportIssueScreen = ({ onNavigate }: any) => {
       return;
     }
 
+    // Check if any meaningful data was entered
+    const hasContent = description.trim().length > 0 || 
+                       (relatedOrder.trim().length > 0) || 
+                       photos.length > 0;
+
+    if (!hasContent) {
+      showCustomAlert('Please provide some details about the issue', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
       const formData = new FormData();

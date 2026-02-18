@@ -1,4 +1,13 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+// Responsive scaling factors
+const scale = width / 375; // Base width (iPhone 11)
+const verticalScale = height / 812; // Base height (iPhone 11)
+
+const responsiveSize = (size: number) => size * scale;
+const responsiveVerticalSize = (size: number) => size * verticalScale;
 
 export default StyleSheet.create({
   container: {
@@ -9,19 +18,18 @@ export default StyleSheet.create({
 
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    marginBottom: 70, 
+    paddingHorizontal: responsiveSize(16),
+    paddingTop: responsiveVerticalSize(16),
+    marginBottom: responsiveVerticalSize(70), 
   },
 
   // Balance Card
   balanceCard: {
     backgroundColor: '#086B48',
-    borderRadius: 12,
-    padding: 28,
-
-    paddingVertical: 40,
-    marginBottom: 20,
+    borderRadius: responsiveSize(12),
+    padding: responsiveSize(28),
+    paddingVertical: responsiveVerticalSize(40),
+    marginBottom: responsiveVerticalSize(20),
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -30,25 +38,24 @@ export default StyleSheet.create({
   },
 
   walletTitle: {
-    fontSize: 22,
+    fontSize: responsiveSize(22),
     justifyContent: 'center',
     alignItems: 'center',
     textAlign: 'center',
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 22,
+    marginBottom: responsiveVerticalSize(22),
   },
 
   availableBalanceLabel: {
-    fontSize: 14,
+    fontSize: responsiveSize(14),
     color: '#fff',
-    
     opacity: 0.9,
-    marginBottom: 4,
+    marginBottom: responsiveVerticalSize(4),
   },
 
   balanceAmount: {
-    fontSize: 32,
+    fontSize: responsiveSize(32),
     fontWeight: '700',
     justifyContent: 'center',
     alignItems: 'center',
@@ -58,40 +65,40 @@ export default StyleSheet.create({
 
   // Amount Input Section
   inputSection: {
-    marginBottom: 20,
+    marginBottom: responsiveVerticalSize(20),
   },
 
   inputLabel: {
-    fontSize: 16,
+    fontSize: responsiveSize(16),
     fontWeight: '500',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: responsiveVerticalSize(8),
   },
 
   amountInput: {
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#C6C9C8',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    fontSize: 16,
-    marginBottom: 8,
+    borderRadius: responsiveSize(8),
+    paddingHorizontal: responsiveSize(16),
+    paddingVertical: responsiveVerticalSize(18),
+    fontSize: responsiveSize(16),
+    marginBottom: responsiveVerticalSize(8),
   },
 
   errorMessage: {
-    fontSize: 14,
+    fontSize: responsiveSize(14),
     color: '#f44336',
-    marginBottom: 8,
+    marginBottom: responsiveVerticalSize(8),
   },
 
   // Redeem Button
   redeemButton: {
     backgroundColor: '#9B9B9B',
-    borderRadius: 30,
-    paddingVertical: 22,
+    borderRadius: responsiveSize(30),
+    paddingVertical: responsiveVerticalSize(22),
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: responsiveVerticalSize(24),
   },
 
   redeemButtonActive: {
@@ -99,7 +106,7 @@ export default StyleSheet.create({
   },
 
   redeemButtonText: {
-    fontSize: 16,
+    fontSize: responsiveSize(16),
     fontWeight: '600',
     color: '#fff',
   },
@@ -108,8 +115,8 @@ export default StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: responsiveSize(8),
+    marginBottom: responsiveVerticalSize(16),
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -119,9 +126,9 @@ export default StyleSheet.create({
 
   tabButton: {
     flex: 1,
-    paddingVertical: 22,
+    paddingVertical: responsiveVerticalSize(22),
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: responsiveSize(8),
   },
 
   tabButtonActive: {
@@ -129,46 +136,46 @@ export default StyleSheet.create({
   },
 
   tabButtonText: {
-    fontSize: 18,
+    fontSize: responsiveSize(16),
     fontWeight: '500',
     color: '#086B48',
+    paddingHorizontal: responsiveSize(8),
+    textAlign: 'center',
   },
 
   tabButtonTextActive: {
     color: '#fff',
-
   },
 
   // Transaction List
   transactionList: {
-    marginBottom: 20,
+    marginBottom: responsiveVerticalSize(20),
     flex: 1,
   },
 
   transactionItem: {
     backgroundColor: '#46A27F80',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    
+    borderRadius: responsiveSize(16),
+    padding: responsiveSize(16),
+    marginBottom: responsiveVerticalSize(12),
   },
 
   transactionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: responsiveVerticalSize(12),
   },
 
   transactionType: {
-    fontSize: 18,
+    fontSize: responsiveSize(16),
     fontWeight: '600',
     color: '#000',
     flex: 1,
   },
 
   transactionAmount: {
-    fontSize: 20,
+    fontSize: responsiveSize(18),
     fontWeight: '700',
     textAlign: 'right',
     flex: 1,
@@ -186,25 +193,25 @@ export default StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
+    gap: responsiveSize(16),
   },
 
   transactionOrderId: {
-    fontSize: 16,
+    fontSize: responsiveSize(14),
     color: '#2D302F',
     flex: 1,
     textAlign: 'left',
   },
 
   transactionId: {
-    fontSize: 16,
+    fontSize: responsiveSize(12),
     color: '#2D302F',
     flex: 1,
     textAlign: 'left',
   },
 
   transactionDate: {
-    fontSize: 16,
+    fontSize: responsiveSize(12),
     color: '#2D302F',
     textAlign: 'right',
     flex: 1,
@@ -213,8 +220,9 @@ export default StyleSheet.create({
   // Settlement History Table
   tableContainer: {
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: responsiveSize(8),
     elevation: 1,
+    marginBottom: responsiveVerticalSize(60),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -224,16 +232,47 @@ export default StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderRadius: 12,
+    borderRadius: responsiveSize(12),
     backgroundColor: '#46A27F80',
     borderBottomColor: '#eee',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingVertical: responsiveVerticalSize(12),
+    paddingHorizontal: responsiveSize(8),
   },
 
   tableHeaderText: {
+    fontSize: responsiveSize(12),
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  tableHeaderTextDate: {
+    flex: 1.5,
+    fontSize: responsiveSize(12),
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  tableHeaderTextAmount: {
     flex: 1,
-    fontSize: 18,
+    fontSize: responsiveSize(12),
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  tableHeaderTextStatus: {
+    flex: 1,
+    fontSize: responsiveSize(12),
+    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+  },
+
+  tableHeaderTextNotes: {
+    flex: 0.8,
+    fontSize: responsiveSize(12),
     fontWeight: '500',
     color: '#333',
     textAlign: 'center',
@@ -242,24 +281,52 @@ export default StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderRadius: 12,
+    borderRadius: responsiveSize(12),
     borderBottomColor: '#f5f5f5',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingVertical: responsiveVerticalSize(12),
+    paddingHorizontal: responsiveSize(8),
+    alignItems: 'center',
   },
 
   tableCell: {
+    fontSize: responsiveSize(11),
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  tableCellDate: {
+    flex: 1.5,
+    fontSize: responsiveSize(11),
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  tableCellAmount: {
     flex: 1,
-    fontSize: 14,
+    fontSize: responsiveSize(11),
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  tableCellStatus: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  tableCellNotes: {
+    flex: 0.8,
+    fontSize: responsiveSize(10),
     color: '#666',
     textAlign: 'center',
   },
 
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: responsiveSize(6),
+    paddingVertical: responsiveVerticalSize(3),
+    borderRadius: responsiveSize(10),
     alignSelf: 'center',
+    minWidth: responsiveSize(60),
   },
 
   statusSettled: {
@@ -278,8 +345,9 @@ export default StyleSheet.create({
   },
 
   statusText: {
-    fontSize: 14,
+    fontSize: responsiveSize(10),
     fontWeight: '500',
+    textAlign: 'center',
   },
 
   // Loading and Empty states
@@ -290,20 +358,20 @@ export default StyleSheet.create({
   },
 
   loadingText: {
-    fontSize: 16,
+    fontSize: responsiveSize(16),
     color: '#666',
-    marginTop: 8,
+    marginTop: responsiveVerticalSize(8),
   },
 
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: responsiveVerticalSize(40),
   },
 
   emptyText: {
-    fontSize: 16,
+    fontSize: responsiveSize(16),
     color: '#999',
     textAlign: 'center',
   },

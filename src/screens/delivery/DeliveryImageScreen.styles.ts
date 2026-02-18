@@ -41,8 +41,19 @@ export default StyleSheet.create({
   placeholderIcon: {
     width: 56,
     height: 56,
-    
     resizeMode: 'contain',
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+    resizeMode: 'cover',
+  },
+  placeholderText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
   },
   uploadBtn: {
     width: '100%',
@@ -57,6 +68,47 @@ export default StyleSheet.create({
   uploadBtnText: {
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
+    color: '#fff',
+  },
+  
+  // Image Picker Options Modal
+  optionsModalCard: {
+    width: '100%',
+    maxWidth: 300,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 20,
+    alignItems: 'center',
+  },
+  
+  optionsTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#111',
+    marginBottom: 20,
+  },
+  
+  optionButton: {
+    width: '100%',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  
+  optionButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Medium',
+    color: '#333',
+  },
+  
+  cancelButton: {
+    backgroundColor: '#ff4444',
+  },
+  
+  cancelButtonText: {
     color: '#fff',
   },
 });

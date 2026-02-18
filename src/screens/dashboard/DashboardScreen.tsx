@@ -555,13 +555,34 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
           ...prev,
           status: newValue
         }));
+        
+        // Show success toast notification
+        Toast.show({
+          type: 'success',
+          text1: 'Status Updated',
+          text2: `Status ${newValue ? 'Active' : 'Inactive'} Successfully`,
+        });
       } else {
         console.error('Failed to update status:', response.data.message);
         setIsOnline(!newValue);
+        
+        // Show error toast notification
+        Toast.show({
+          type: 'error',
+          text1: 'Status Update Failed',
+          text2: response.data.message || 'Failed to update status',
+        });
       }
     } catch (error) {
       console.error('Error toggling driver status:', error);
       setIsOnline(!newValue);
+      
+      // Show error toast notification
+      Toast.show({
+        type: 'error',
+        text1: 'Status Update Failed',
+        text2: 'Network error. Please try again.',
+      });
     }
   };
 
@@ -1039,8 +1060,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         </TouchableOpacity>
       </View>
 
-      <SafeAreaView style={styles.contentContainer}>
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <SafeAreaView style={[styles.contentContainer, { paddingBottom: insets.bottom }]}>
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          nestedScrollEnabled={true}
+        >
           {ordersLoading ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading orders...</Text>

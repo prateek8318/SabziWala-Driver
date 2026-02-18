@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import GlobalHeader from '../../../components/GlobalHeader';
 import ApiService from '../../../services/api';
@@ -172,6 +172,23 @@ const BankDetailsScreen: React.FC<BankDetailsScreenProps> = ({ onNavigate }) => 
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+
+    // Check if any changes were made during editing
+    if (isEditing && bankDetails) {
+      const hasChanges = (
+        formData.bankName !== (bankDetails.bankName || '') ||
+        formData.branchName !== (bankDetails.branchName || '') ||
+        formData.beneficiaryName !== (bankDetails.beneficiaryName || '') ||
+        formData.accountNo !== (bankDetails.accountNo || '') ||
+        formData.ifsc !== (bankDetails.ifsc || '') ||
+        formData.upiId !== (bankDetails.upiId || '')
+      );
+
+      if (!hasChanges) {
+        showToast('No changes were made to update', 'warning');
+        return;
+      }
+    }
 
     setLoading(true);
     try {
@@ -373,7 +390,7 @@ const BankDetailsScreen: React.FC<BankDetailsScreenProps> = ({ onNavigate }) => 
 
   if (fetchLoading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <GlobalHeader
           title="Account Details"
           onBack={handleBack}
@@ -382,12 +399,12 @@ const BankDetailsScreen: React.FC<BankDetailsScreenProps> = ({ onNavigate }) => 
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0A8F5A" />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <GlobalHeader
         title="Account Details"
         onBack={handleBack}
@@ -404,8 +421,9 @@ const BankDetailsScreen: React.FC<BankDetailsScreenProps> = ({ onNavigate }) => 
         message={toast.message}
         type={toast.type}
         onHide={hideToast}
+        showIcon={false}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

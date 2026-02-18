@@ -1,6 +1,6 @@
 import io from 'socket.io-client';
-import { Platform } from 'react-native';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import { playNotificationSound } from '../utils/notificationSound';
 
 // Define Socket interface locally to avoid import issues
 interface SocketInterface {
@@ -9,6 +9,17 @@ interface SocketInterface {
     disconnect(): void;
     connected: boolean;
     id: string;
+    io?: {
+        opts: {
+            transports: string[];
+        };
+        engine?: {
+            transport?: {
+                name: string;
+            };
+        };
+    };
+    connect?(): void;
 }
 
 interface OrderData {
@@ -33,41 +44,41 @@ class SocketService {
     private isConnecting = false;
  
     connect(driverId: string) {
-        console.log('🚀 Starting socket connection...');
-        console.log('🌐 Server URL: http://192.168.1.15:7006');
-        console.log('👤 Driver ID:', driverId);
-        
         this.driverId = driverId;
         
-        this.socket = io('http://192.168.1.15:7006', {
-            transports: ['polling'], // Only polling for now
-            timeout: 20000
+        this.socket = io('http://192.168.1.9:7006', {
+            transports: ['websocket'], // Try websocket first
+            timeout: 10000 // 10 seconds timeout
         });
- 
+
         this.socket.on('connect', () => {
             console.log('✅ Socket connected:', this.socket?.id);
             this.socket?.emit('driver:register', driverId);
         });
- 
+
         this.socket.on('connect_error', (error) => {
-            console.error('❌ Connection error:', error || 'Unknown error');
-            console.error('❌ Error details:', JSON.stringify(error, null, 2));
-            console.error('❌ Socket state:', {
-                connected: this.socket?.connected,
-                id: this.socket?.id
-            });
+            console.error('❌ Connection error:', error.message);
+            
+            // Fallback to polling if websocket fails
+            if (this.socket?.io?.engine?.transport?.name === 'websocket') {
+                console.log('🔄 Switching to polling...');
+                if (this.socket.io && this.socket.connect) {
+                    this.socket.io.opts.transports = ['polling'];
+                    this.socket.connect();
+                }
+            }
         });
 
-        this.socket.on('disconnect', (reason) => {
-            console.log('🔌 Socket disconnected:', reason);
-        });
-
-        this.socket.on('driver:registered', (data: any) => {
+        this.socket.on('driver:registered', (data) => {
             console.log('✅ Driver registered:', data);
         });
 
         this.socket.on('new:order', (data: any) => {
             this.handleNewOrder(data);
+        });
+
+        this.socket.on('disconnect', (reason) => {
+            console.log('🔌 Socket disconnected:', reason);
         });
     }
 
@@ -105,8 +116,8 @@ class SocketService {
     private handleNewOrder(orderData: any) {
         console.log('🔔 New order received:', orderData);
         
-        // Play sound
-        this.playNotificationSound();
+        // Play sound (uses order_notification.mp3 from res/raw on Android)
+        playNotificationSound();
         
         // Show notification
         this.showOrderNotification(orderData);
@@ -115,65 +126,6 @@ class SocketService {
         this.triggerHapticFeedback();
     }
  
-    private playNotificationSound() {
-        // React Native sound
-        try {
-            const { Sound } = require('react-native-sound');
-            
-            // Set the audio category for iOS
-            Sound.setCategory('Playback');
-            
-            const notificationSound = new Sound('order-notification.mp3', Sound.MAIN_BUNDLE, (error: any) => {
-                if (error) {
-                    console.log('❌ Sound loading error:', error);
-                    // Try alternative sound file or use system sound
-                    this.playSystemSound();
-                } else {
-                    console.log('✅ Sound loaded successfully');
-                    notificationSound.play((success: any) => {
-                        if (success) {
-                            console.log('✅ Sound played successfully');
-                        } else {
-                            console.log('❌ Sound playback failed');
-                            this.playSystemSound();
-                        }
-                    });
-                }
-            });
-
-            // Release sound after playing
-            setTimeout(() => {
-                notificationSound.release();
-            }, 2000);
-            
-        } catch (error: any) {
-            console.log('❌ React-native-sound not available:', error);
-            this.playSystemSound();
-        }
-    }
-
-    private playSystemSound() {
-        try {
-            // Use React Native's built-in sound as fallback
-            const { Platform, Alert } = require('react-native');
-            
-            if (Platform.OS === 'android') {
-                // For Android, use vibration and visual alert
-                console.log('🔔 Using Android notification fallback');
-                // You could add Android-specific vibration here
-                Alert.alert('🔔 New Order', 'You have received a new order!', [
-                    { text: 'OK', onPress: () => console.log('Order notification acknowledged') }
-                ]);
-            } else {
-                // For iOS
-                console.log('🔔 Using iOS notification fallback');
-                Alert.alert('🔔 New Order', 'You have received a new order!');
-            }
-        } catch (error) {
-            console.log('❌ System sound fallback failed:', error);
-        }
-    }
-
     private triggerHapticFeedback() {
         ReactNativeHapticFeedback.trigger('notificationSuccess', {
             enableVibrateFallback: true,

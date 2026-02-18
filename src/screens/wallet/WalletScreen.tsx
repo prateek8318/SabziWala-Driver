@@ -14,7 +14,9 @@ import {
 
   ActivityIndicator,
 
-  Alert 
+  Alert,
+
+  Dimensions 
 
 } from 'react-native';
 
@@ -353,33 +355,40 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onNavigate }) => {
 
 
   // Format date
-
   const formatDate = (dateString: string) => {
-
     if (!dateString) return '--';
-
+    
     const date = new Date(dateString);
-
     if (Number.isNaN(date.getTime())) return '--';
 
     try {
-
-      return date.toLocaleDateString('en-IN', {
-
-        day: '2-digit',
-
-        month: 'short',
-
-        year: 'numeric',
-
-      });
-
+      // For better responsive display, use shorter format on smaller screens
+      const { width } = Dimensions.get('window');
+      if (width < 360) {
+        // Very small screens - use DD/MM/YY format
+        return date.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+        });
+      } else if (width < 400) {
+        // Small screens - use DD MMM YY format
+        return date.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: '2-digit',
+        });
+      } else {
+        // Larger screens - use full format
+        return date.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        });
+      }
     } catch {
-
       return '--';
-
     }
-
   };
 
 
@@ -785,15 +794,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onNavigate }) => {
           <View style={styles.tableContainer}>
 
             <View style={styles.tableHeader}>
-
-              <Text style={styles.tableHeaderText}>Date</Text>
-
-              <Text style={styles.tableHeaderText}>Amount</Text>
-
-              <Text style={styles.tableHeaderText}>Status</Text>
-
-              <Text style={styles.tableHeaderText}>Notes</Text>
-
+              <Text style={styles.tableHeaderTextDate}>Date</Text>
+              <Text style={styles.tableHeaderTextAmount}>Amount</Text>
+              <Text style={styles.tableHeaderTextStatus}>Status</Text>
+              <Text style={styles.tableHeaderTextNotes}>Notes</Text>
             </View>
 
             {walletRequests.length > 0 ? (
@@ -801,47 +805,28 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onNavigate }) => {
               walletRequests.map((request) => (
 
                 <View key={request._id || `${request.request_date}-${request.amount_requested}`} style={styles.tableRow}>
-
-                  <Text style={styles.tableCell}>
-
+                  <Text style={styles.tableCellDate}>
                     {formatDate(request.request_date || request.createdAt)}
-
                   </Text>
-
-                  <Text style={styles.tableCell}>
-
+                  <Text style={styles.tableCellAmount}>
                     ₹{request.amount_requested ?? 0}
-
                   </Text>
-
-                  <View style={[
-
-                    styles.statusBadge,
-
-                    request.status === 'approved' && styles.statusSettled,
-
-                    request.status === 'pending' && styles.statusPending,
-
-                    request.status === 'rejected' && styles.statusRejected
-
-                  ]}>
-
-                    <Text style={styles.statusText}>
-
-                      {request.status === 'approved' ? 'Settled' : 
-
-                       request.status === 'pending' ? 'Pending' : 'Rejected'}
-
-                    </Text>
-
+                  <View style={styles.tableCellStatus}>
+                    <View style={[
+                      styles.statusBadge,
+                      request.status === 'approved' && styles.statusSettled,
+                      request.status === 'pending' && styles.statusPending,
+                      request.status === 'rejected' && styles.statusRejected
+                    ]}>
+                      <Text style={styles.statusText}>
+                        {request.status === 'approved' ? 'Settled' : 
+                         request.status === 'pending' ? 'Pending' : 'Rejected'}
+                      </Text>
+                    </View>
                   </View>
-
-                  <Text style={styles.tableCell}>
-
+                  <Text style={styles.tableCellNotes}>
                     #{(request._id || '').slice(-4) || '----'}
-
                   </Text>
-
                 </View>
 
               ))

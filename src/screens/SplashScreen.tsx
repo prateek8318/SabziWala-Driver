@@ -5,7 +5,6 @@ import {
   Animated,
   Dimensions,
   Image,
-  StatusBar,
 } from 'react-native';
 
 interface SplashScreenProps {
@@ -41,8 +40,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden={true} />
-
       <Animated.View
         style={[
           styles.imageWrapper,

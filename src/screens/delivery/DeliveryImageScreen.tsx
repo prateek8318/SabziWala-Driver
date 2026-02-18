@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, Modal, Alert } from 'react-native';
+import { launchCamera, MediaType, ImagePickerResponse } from 'react-native-image-picker';
 import GlobalHeader from '../../components/GlobalHeader';
 import styles from './DeliveryImageScreen.styles';
 import { ApiService } from '../../services/api';
@@ -20,25 +21,74 @@ const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNa
   };
 
   const pickPhotoPlaceholder = async () => {
-    // NOTE: This project currently doesn't have an image picker dependency wired.
-    // We keep a placeholder URI so UI flow works; integrate react-native-image-picker later if needed.
-    setPhotoUri('placeholder://delivery-photo');
+    const options = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8 as any,
+      maxWidth: 800,
+      maxHeight: 600,
+    };
+
+    launchCamera(options, async (response: ImagePickerResponse) => {
+      if (response.didCancel) {
+        return;
+      }
+      
+      if (response.errorMessage) {
+        Alert.alert('Error', 'Failed to open camera. Please try again.');
+        return;
+      }
+
+      if (response.assets && response.assets[0]) {
+        const asset = response.assets[0];
+        setPhotoUri(asset.uri || '');
+      }
+    });
   };
 
   const markDelivered = async () => {
     if (!orderId) return;
+    if (!photoUri || photoUri === 'placeholder://delivery-photo') {
+      Alert.alert('Image Required', 'Please select an image before marking as delivered');
+      return;
+    }
+    
     try {
       setUploading(true);
 
-      // If backend expects a photo upload, wire ApiService.upload(...) to the correct endpoint.
-      // For now we only update status to delivered.
+      // First, get order details to find earnings
+      const orderResponse = await ApiService.getDriverOrderDetails(orderId);
+      const order = orderResponse.data?.data || orderResponse.data;
+      
+      // Update order status to delivered
       await ApiService.updateOrderStatus(orderId, 'delivered');
+
+      // Calculate earnings from order
+      const earning = 
+        order.driverEarning || 
+        order.earning || 
+        order.deliveryCharge || 
+        order.driverIncome || 
+        0;
+
+      // Add earnings to wallet if there's any earning
+      if (earning > 0) {
+        try {
+          await ApiService.addEarningsToWallet(orderId, earning);
+          console.log(`Added ₹${earning} to wallet for order ${orderId}`);
+        } catch (walletError) {
+          console.warn('Failed to add earnings to wallet:', walletError);
+          // Don't fail the delivery if wallet update fails
+        }
+      }
 
       ApiService.createDriverNotification({
         title: 'Order Delivered',
-        message: `Order #${orderId} delivered successfully.`,
+        message: earning > 0
+          ? `Order #${orderId} delivered. Earnings: ₹${earning}`
+          : `Order #${orderId} delivered successfully.`,
         type: 'order_delivered',
         orderId,
+        amount: earning > 0 ? earning : undefined,
       }).catch(() => {});
 
       onNavigate?.(`deliveryCompleted:${orderId}:${encodeURIComponent(photoUri || '')}`);
@@ -59,23 +109,38 @@ const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNa
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Add Photo</Text>
 
-              <View style={styles.imagePlaceholder}>
-                <Image source={require('../../images/image.png')} style={styles.placeholderIcon} />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.uploadBtn, uploading && styles.uploadBtnDisabled]}
-                onPress={async () => {
-                  await pickPhotoPlaceholder();
-                  await markDelivered();
-                }}
+              <TouchableOpacity 
+                style={styles.imagePlaceholder}
+                onPress={pickPhotoPlaceholder}
                 disabled={uploading}
               >
-                <Text style={styles.uploadBtnText}>{uploading ? 'Uploading...' : 'Click here to upload'}</Text>
+                {photoUri && photoUri !== 'placeholder://delivery-photo' ? (
+                  <Image source={{ uri: photoUri }} style={styles.selectedImage} />
+                ) : (
+                  <>
+                    <Image source={require('../../images/image.png')} style={styles.placeholderIcon} />
+                    <Text style={styles.placeholderText}>Tap to take photo</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.uploadBtn, 
+                  (!photoUri || photoUri === 'placeholder://delivery-photo') && styles.uploadBtnDisabled,
+                  uploading && styles.uploadBtnDisabled
+                ]}
+                onPress={markDelivered}
+                disabled={!photoUri || photoUri === 'placeholder://delivery-photo' || uploading}
+              >
+                <Text style={styles.uploadBtnText}>
+                  {uploading ? 'Uploading...' : 'Mark as Delivered'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
+
       </View>
     </View>
   );

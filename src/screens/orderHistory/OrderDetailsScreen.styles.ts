@@ -720,4 +720,171 @@ updateButtonFull: {
     fontWeight: '500',
   },
 
+  // QR Modal Styles
+  qrModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: scaleSize(16),
+    padding: scaleSize(24),
+    width: width * 0.85,
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+
+  qrModalTitle: {
+    fontSize: scaleFont(20),
+    fontWeight: '700',
+    color: '#086B48',
+    marginBottom: scaleSize(8),
+    textAlign: 'center',
+  },
+
+  qrModalSubtitle: {
+    fontSize: scaleFont(14),
+    color: '#666',
+    marginBottom: scaleSize(4),
+    textAlign: 'center',
+  },
+
+  qrModalAmount: {
+    fontSize: scaleFont(18),
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: scaleSize(20),
+    textAlign: 'center',
+  },
+
+  qrCodeContainer: {
+    width: width * 0.5,
+    height: width * 0.5,
+    maxWidth: 200,
+    maxHeight: 200,
+    backgroundColor: '#f8f8f8',
+    borderRadius: scaleSize(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: scaleSize(16),
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+
+  qrCodeImage: {
+    width: '80%',
+    height: '80%',
+    resizeMode: 'contain',
+  },
+
+  qrInstructionText: {
+    fontSize: scaleFont(14),
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: scaleSize(20),
+    lineHeight: scaleSize(20),
+  },
+
+  qrCloseButton: {
+    backgroundColor: '#086B48',
+    paddingVertical: scaleSize(12),
+    paddingHorizontal: scaleSize(32),
+    borderRadius: scaleSize(25),
+    alignItems: 'center',
+  },
+
+  qrCloseButtonText: {
+    color: '#fff',
+    fontSize: scaleFont(16),
+    fontWeight: '600',
+  },
+
+  // Inline QR Code Display Styles
+  qrCodeDisplay: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: scaleSize(12),
+    padding: scaleSize(16),
+    marginTop: scaleSize(12),
+    marginBottom: scaleSize(12),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+
+  qrCodeTitle: {
+    fontSize: scaleFont(16),
+    fontWeight: '600',
+    color: '#086B48',
+    marginBottom: scaleSize(4),
+    textAlign: 'center',
+  },
+
+  qrCodeSubtitle: {
+    fontSize: scaleFont(12),
+    color: '#666',
+    marginBottom: scaleSize(8),
+    textAlign: 'center',
+  },
+
+  qrCodeAmount: {
+    fontSize: scaleFont(16),
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: scaleSize(16),
+    textAlign: 'center',
+  },
+
+  qrCodeWrapper: {
+    alignItems: 'center',
+    marginBottom: scaleSize(12),
+  },
+
+  qrCodePlaceholder: {
+    width: scaleSize(150),
+    height: scaleSize(150),
+    backgroundColor: '#fff',
+    borderRadius: scaleSize(8),
+    borderWidth: 2,
+    borderColor: '#086B48',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderStyle: 'dashed',
+  },
+
+  qrCodePlaceholderText: {
+    fontSize: scaleFont(14),
+    fontWeight: '700',
+    color: '#086B48',
+    marginBottom: scaleSize(4),
+  },
+
+  qrCodePlaceholderSubtext: {
+    fontSize: scaleFont(10),
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  qrCodeInstruction: {
+    fontSize: scaleFont(12),
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: scaleSize(12),
+    lineHeight: scaleSize(16),
+  },
+
+  qrCodeHideButton: {
+    backgroundColor: '#6c757d',
+    paddingVertical: scaleSize(8),
+    paddingHorizontal: scaleSize(20),
+    borderRadius: scaleSize(20),
+    alignItems: 'center',
+  },
+
+  qrCodeHideButtonText: {
+    color: '#fff',
+    fontSize: scaleFont(12),
+    fontWeight: '500',
+  },
+
 });

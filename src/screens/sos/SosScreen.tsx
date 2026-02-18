@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import GlobalHeader from '../../components/GlobalHeader';
 import styles from './SosScreen.styles';
@@ -33,6 +34,32 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
   const [showSosOptions, setShowSosOptions] = useState(false);
   const [sosSettings, setSosSettings] = useState<SOSSettingsData | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showError, setShowError] = useState(false);
+  const [toastAnimation] = useState(new Animated.Value(0));
+
+  const showErrorMessage = (message: string) => {
+    setError(message);
+    setShowError(true);
+    
+    // Animate toast in
+    Animated.timing(toastAnimation, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+      Animated.timing(toastAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowError(false);
+      });
+    }, 3000);
+  };
 
   const sosTypeOptions = [
     { label: 'Breakdown', value: 'breakdown' as const },
@@ -72,18 +99,18 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
   const validateForm = (): boolean => {
     // Check if remarks are required
     if (sosSettings?.formSettings.requireRemarks && !remarks.trim()) {
-      Alert.alert('Error', 'Please enter remarks');
+      showErrorMessage('Please enter remarks');
       return false;
     }
     
     // Check if emergency contact is required
     if (sosSettings?.formSettings.showEmergencyContact) {
       if (!name.trim()) {
-        Alert.alert('Error', 'Please enter emergency contact name');
+        showErrorMessage('Please enter emergency contact name');
         return false;
       }
       if (!mobile.trim() || mobile.length !== 10) {
-        Alert.alert('Error', 'Please enter a valid 10-digit mobile number');
+        showErrorMessage('Please enter a valid 10-digit mobile number');
         return false;
       }
     }
@@ -248,8 +275,13 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
                     placeholder="Mobile Number"
                     placeholderTextColor="#000"
                     keyboardType="phone-pad"
+                    maxLength={10}
                     value={mobile}
-                    onChangeText={setMobile}
+                    onChangeText={(text) => {
+                      // Only allow numbers
+                      const numericText = text.replace(/[^0-9]/g, '');
+                      setMobile(numericText);
+                    }}
                   />
                 </>
               )}
@@ -279,6 +311,28 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
                 )}
               </TouchableOpacity>
             </View>
+
+            {/* Toast Message */}
+            {showError && (
+              <Animated.View 
+                style={[
+                  styles.toastContainer,
+                  {
+                    opacity: toastAnimation,
+                    transform: [
+                      {
+                        translateY: toastAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-100, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Text style={styles.toastText}>{error}</Text>
+              </Animated.View>
+            )}
 
             {/* Emergency Services - Use quick dial buttons from settings */}
             <View style={styles.emergencyRow}>

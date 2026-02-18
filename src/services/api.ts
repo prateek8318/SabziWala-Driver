@@ -11,9 +11,9 @@ import { PolicyResponse } from '../types/policies';
 
 // -------------------------------------------------
 // 1. Base URL (Driver API - Production)
-// const BASE_URL = 'http://192.168.1.15:7006/api/';
+// const BASE_URL = 'http://192.168.1.21:7006/api/';
  const BASE_URL = 'http://159.89.146.245:5010/api/';
-// export const IMAGE_BASE_URL = 'http://192.168.1.15:7006/public/';
+// export const IMAGE_BASE_URL = 'http://192.168.1.21:7006/public/';
  export const IMAGE_BASE_URL = 'http://159.89.146.245:5010/public/';
 
 // -------------------------------------------------
@@ -194,6 +194,10 @@ export const ApiService = {
 
   getWalletRequests: async () => {
     return await api.get('driver/wallet/request');
+  },
+
+  addEarningsToWallet: async (orderId: string, amount: number) => {
+    return await api.post('driver/wallet/add-earnings', { orderId, amount });
   },
 
   // ---- DRIVER STATUS MANAGEMENT ----

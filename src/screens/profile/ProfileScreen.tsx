@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ApiService } from '../../services/api';
+import { ApiService, IMAGE_BASE_URL } from '../../services/api';
 import GlobalHeader from '../../components/GlobalHeader';
 import styles from './ProfileScreen.styles';
 
@@ -18,6 +18,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout, onNavigate }) =
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [driverProfile, setDriverProfile] = useState<any>(null);
+  const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
     fetchDriverProfile();
@@ -31,11 +32,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout, onNavigate }) =
         const profile = response.data.driver;
         console.log('ProfileScreen: Driver profile fetched:', JSON.stringify(profile, null, 2));
         setDriverProfile(profile);
-        
-        if (profile?.image) {
-          const imageUrl = `http://192.168.1.23:5002/${profile.image.replace(/\\/g, '/')}`;
-          console.log('ProfileScreen: Image URL:', imageUrl);
-        }
       }
     } catch (error) {
       console.error('ProfileScreen: Error fetching driver profile:', error);
@@ -90,15 +86,66 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onLogout, onNavigate }) =
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <Image
-              source={driverProfile?.image ? 
-                { uri: `http://192.168.1.23:5002/${driverProfile.image.replace(/\\/g, '/')}` } : 
-                require('../../images/profile.png')
-              }
-              style={styles.avatarImg}
-              onError={() => console.log('Profile image load error:', `http://192.168.1.23:5002/${driverProfile?.image?.replace(/\\/g, '/')}`)}
-              defaultSource={require('../../images/profile.png')}
-            />
+            {driverProfile?.image ? (
+              (() => {
+                const imagePath = driverProfile.image.replace(/\\/g, '/');
+                // Remove 'public/' prefix if it exists since IMAGE_BASE_URL already includes it
+                const cleanPath = imagePath.startsWith('public/') ? imagePath.substring(6) : imagePath;
+                // Ensure no leading slash to avoid double slashes
+                const normalizedPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+                
+                const imageUrl = `${IMAGE_BASE_URL}${normalizedPath}`;
+                const fallbackUrl = `${IMAGE_BASE_URL}${imagePath}`;
+                const alternativeUrl1 = `${IMAGE_BASE_URL.replace('/public/', '/')}${normalizedPath}`;
+                const alternativeUrl2 = `${IMAGE_BASE_URL}driver/${driverProfile.image.split('\\').pop()}`;
+                
+                const errorCount = imageLoadErrors[driverProfile.image] || 0;
+                const urls = [imageUrl, fallbackUrl, alternativeUrl1, alternativeUrl2];
+                const currentUrl = urls[Math.min(errorCount, urls.length - 1)];
+                
+                console.log('=== PROFILE IMAGE DEBUG ===');
+                console.log('Original Image Path:', driverProfile.image);
+                console.log('Converted Image Path:', imagePath);
+                console.log('Clean Path:', cleanPath);
+                console.log('Normalized Path:', normalizedPath);
+                console.log('Current URL:', currentUrl);
+                console.log('Error Count:', errorCount);
+                console.log('============================');
+                
+                return (
+                  <Image 
+                    source={{ uri: currentUrl }} 
+                    style={styles.avatarImg}
+                    onError={(e) => {
+                      console.log('Image load error:', e.nativeEvent.error);
+                      console.log('Failed URL:', currentUrl);
+                      
+                      if (errorCount < urls.length - 1) {
+                        // Try next URL
+                        setImageLoadErrors(prev => ({
+                          ...prev,
+                          [driverProfile.image]: errorCount + 1
+                        }));
+                      } else {
+                        // All URLs failed, show default image
+                        console.log('All URLs failed, showing default image');
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('Image loaded successfully:', currentUrl);
+                      // Reset error state on successful load
+                      setImageLoadErrors(prev => {
+                        const newState = { ...prev };
+                        delete newState[driverProfile.image];
+                        return newState;
+                      });
+                    }}
+                  />
+                );
+              })()
+            ) : (
+              <Image source={require('../../images/profile.png')} style={styles.avatarImg} />
+            )}
           </View>
           <TouchableOpacity onPress={() => onNavigate && onNavigate('editProfile')}>
             <Text style={styles.editText}>Edit</Text>

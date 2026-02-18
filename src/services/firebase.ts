@@ -1,7 +1,7 @@
 import messaging from '@react-native-firebase/messaging';
-import firebase from '@react-native-firebase/app';
 import { Platform } from 'react-native';
 import { storage } from './storage';
+import { playNotificationSound } from '../utils/notificationSound';
 
 class FirebaseService {
   async initializeApp(): Promise<void> {
@@ -38,21 +38,29 @@ class FirebaseService {
 
   async getFCMToken(): Promise<string | null> {
     try {
+      console.log('[FCM] Requesting FCM token...');
       const token = await messaging().getToken();
-      console.log('FCM Token:', token);
-      
+      // Log token clearly so it's easy to find in logs
+      console.log('========== FCM TOKEN (copy this for backend) ==========');
+      console.log(token);
+      console.log('========================================================');
+      console.warn('[FCM] Token:', token);
+
       // Save token to storage for later use
       await storage.saveFCMToken(token);
-      
+
       return token;
     } catch (error: any) {
-      console.error('Error getting FCM token:', error.message);
+      console.error('[FCM] Error getting FCM token:', error?.message || error);
+      console.error('[FCM] Full error:', error);
       return null;
     }
   }
 
   async initializeNotifications() {
     try {
+      console.log('[FCM] Initializing notifications...');
+
       // Request permission for iOS
       if (Platform.OS === 'ios') {
         await messaging().requestPermission();
@@ -85,11 +93,16 @@ class FirebaseService {
         // You might want to send this new token to your backend
       });
 
-      // Get FCM token
-      await this.getFCMToken();
-      
+      // Get FCM token (logs token in console - search for "FCM TOKEN" or "[FCM]")
+      const token = await this.getFCMToken();
+      if (token) {
+        console.log('[FCM] Notifications ready. Token saved.');
+      } else {
+        console.warn('[FCM] Notifications init done but token is null - check permission/Google Play Services.');
+      }
     } catch (error: any) {
-      console.warn('Firebase notifications initialization error:', error.message);
+      console.warn('[FCM] Firebase notifications initialization error:', error?.message || error);
+      console.warn('[FCM] Full error:', error);
       // Don't throw error - app can continue without notifications
     }
   }
@@ -111,18 +124,10 @@ class FirebaseService {
   }
 
   private handleForegroundNotification(remoteMessage: any) {
-    // Show custom in-app notification when app is in foreground
-    const { notification, data } = remoteMessage;
-    
-    // You can use react-native-toast-message or custom modal
+    const { notification } = remoteMessage;
     console.log('Foreground notification:', notification?.title, notification?.body);
-    
-    // Example: Show toast message
-    // Toast.show({
-    //   type: 'info',
-    //   text1: notification?.title || 'New Notification',
-    //   text2: notification?.body || '',
-    // });
+    // Play notification sound when app is open and FCM message arrives
+    playNotificationSound();
   }
 
   async unsubscribe() {

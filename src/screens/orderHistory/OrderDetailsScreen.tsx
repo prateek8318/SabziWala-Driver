@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Linking, Modal, Alert } from 'react-native';
 import GlobalHeader from '../../components/GlobalHeader';
 import { ApiService } from '../../services/api';
 import styles from './OrderDetailsScreen.styles';
@@ -12,6 +12,7 @@ interface OrderDetailsScreenProps {
 const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavigate }) => {
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   useEffect(() => {
     fetchOrderDetails();
@@ -105,6 +106,13 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
   const handlePaymentScanner = () => {
     // Handle payment scanner functionality
     console.log('Payment Scanner clicked');
+    
+    // Show QR code for COD payment
+    if (isCODPayment) {
+      setShowQRCode(!showQRCode); // Toggle QR code display
+    } else {
+      Alert.alert('Info', 'Payment scanner is only available for Cash on Delivery orders');
+    }
   };
 
   if (loading) {
@@ -147,6 +155,7 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
   const orderDate = formatDate(orderDetails.createdAt);
   const shippingAddress = orderDetails.shippingAddress || {};
   const userId = orderDetails.userId || {};
+  const delivery = orderDetails.delivery || {};
 
   // Pickup address - use warehouse/store address or default
   const pickup = orderDetails.pickup || {};
@@ -176,7 +185,6 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
     }
 
     // Fallback to delivery object if exists
-    const delivery = orderDetails.delivery || {};
     if (delivery.address1 || delivery.city) {
       const parts = [
         delivery.address1,
@@ -190,16 +198,75 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
     return 'N/A';
   };
   const dropAddress = getDropAddress();
-  const dropPhone = shippingAddress.receiverNo || userId.mobileNo || '';
-  const dropLat = userId.lat;
-  const dropLong = userId.long;
+  const dropPhone = shippingAddress.receiverNo || userId.mobileNo || delivery.mobile || delivery.phone || '';
+  const dropLat = userId.lat || delivery.lat;
+  const dropLong = userId.long || delivery.long;
 
-  // Customer info
-  const customerName = shippingAddress.receiverName || userId.name || 'N/A';
-  const orderValue = orderDetails.grandTotal || orderDetails.totalAmount || 0;
-  const paymentMode = getPaymentModeText(orderDetails.paymentMethod || orderDetails.paymentMode);
-  const isCODPayment = isCOD(orderDetails.paymentMethod || orderDetails.paymentMode);
-  const status = orderDetails.status || 'N/A';
+  // Customer info - Enhanced extraction logic
+  const getCustomerName = () => {
+    // Debug: Log all available data
+    console.log('=== CUSTOMER NAME DEBUG ===');
+    console.log('Full orderDetails:', orderDetails);
+    console.log('shippingAddress:', shippingAddress);
+    console.log('userId:', userId);
+    console.log('delivery:', delivery);
+    console.log('========================');
+    
+    // Try multiple possible fields for customer name
+    const nameFields = [
+      shippingAddress.receiverName,
+      shippingAddress.name,
+      shippingAddress.fullName,
+      delivery.name,
+      delivery.customerName,
+      delivery.receiverName,
+      delivery.fullName,
+      userId.name,
+      userId.customerName,
+      userId.fullName,
+      orderDetails.customerName,
+      orderDetails.receiverName,
+      orderDetails.customer,
+      orderDetails.buyerName,
+      orderDetails.userName
+    ].filter(Boolean);
+    
+    console.log('Customer name fields found:', nameFields);
+    
+    if (nameFields.length > 0) {
+      return nameFields[0];
+    }
+    
+    return 'N/A';
+  };
+  
+  const customerName = getCustomerName();
+  
+  // Enhanced payment mode extraction
+  const getPaymentMode = () => {
+    console.log('=== PAYMENT MODE DEBUG ===');
+    const paymentFields = [
+      orderDetails.paymentMethod,
+      orderDetails.paymentMode,
+      orderDetails.payment_type,
+      orderDetails.payment,
+      orderDetails.paymentOption
+    ].filter(Boolean);
+    
+    console.log('Payment fields found:', paymentFields);
+    console.log('========================');
+    
+    if (paymentFields.length > 0) {
+      return getPaymentModeText(paymentFields[0]);
+    }
+    
+    return 'N/A';
+  };
+  
+  const paymentMode = getPaymentMode();
+  const orderValue = orderDetails.grandTotal || orderDetails.totalAmount || orderDetails.amount || 0;
+  const isCODPayment = isCOD(orderDetails.paymentMethod || orderDetails.paymentMode || orderDetails.payment);
+  const status = orderDetails.status || orderDetails.orderStatus || 'N/A';
   const totalKm = orderDetails.totalKm || 0;
   const totalItems = orderDetails.products?.length || 0;
 
@@ -331,6 +398,32 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
             >
               <Text style={styles.paymentScannerText}>Payment Scanner</Text>
             </TouchableOpacity>
+          )}
+
+          {/* QR Code Display - Shows below payment scanner button when clicked */}
+          {isCODPayment && showQRCode && (
+            <View style={styles.qrCodeDisplay}>
+              <Text style={styles.qrCodeTitle}>Payment QR Code</Text>
+              <Text style={styles.qrCodeSubtitle}>Order #{orderIdDisplay}</Text>
+              <Text style={styles.qrCodeAmount}>Amount: ₹{orderValue}</Text>
+              
+              {/* Dummy QR Code */}
+              <View style={styles.qrCodeWrapper}>
+                <View style={styles.qrCodePlaceholder}>
+                  <Text style={styles.qrCodePlaceholderText}>QR CODE</Text>
+                  <Text style={styles.qrCodePlaceholderSubtext}>For Payment</Text>
+                </View>
+              </View>
+              
+              <Text style={styles.qrCodeInstruction}>Scan this QR code to collect payment</Text>
+              
+              <TouchableOpacity
+                style={styles.qrCodeHideButton}
+                onPress={() => setShowQRCode(false)}
+              >
+                <Text style={styles.qrCodeHideButtonText}>Hide QR Code</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Product Details Link */}

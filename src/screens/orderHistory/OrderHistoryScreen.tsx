@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput, Modal } from 'react-native';
 import GlobalHeader from '../../components/GlobalHeader';
 import BottomNavigation from '../../components/BottomNavigation';
 import styles from './OrderHistoryScreen.styles';
@@ -23,6 +23,10 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarType, setCalendarType] = useState<'start' | 'end'>('start');
 
   useEffect(() => {
     fetchOrders();
@@ -177,11 +181,179 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
         const orderDate = new Date(order.createdAt);
         const start = new Date(customStartDate);
         const end = new Date(customEndDate);
+        end.setHours(23, 59, 59, 999); // Include end date fully
         return orderDate >= start && orderDate <= end;
       });
       setFilteredOrders(filtered);
     }
     setShowFilterDropdown(false);
+  };
+
+  const openCalendar = (type: 'start' | 'end') => {
+    setCalendarType(type);
+    if (type === 'start' && customStartDate) {
+      setCalendarDate(new Date(customStartDate));
+    } else if (type === 'end' && customEndDate) {
+      setCalendarDate(new Date(customEndDate));
+    } else {
+      setCalendarDate(new Date());
+    }
+    if (type === 'start') {
+      setShowStartCalendar(true);
+    } else {
+      setShowEndCalendar(true);
+    }
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const generateCalendarDays = (date: Date) => {
+    const daysInMonth = getDaysInMonth(date);
+    const firstDay = getFirstDayOfMonth(date);
+    const days = [];
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    
+    return days;
+  };
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const renderCalendar = () => {
+    const days = generateCalendarDays(calendarDate);
+    const currentDay = new Date().getDate();
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    return (
+      <Modal
+        visible={showStartCalendar || showEndCalendar}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowStartCalendar(false);
+          setShowEndCalendar(false);
+        }}
+      >
+        <View style={styles.calendarOverlay}>
+          <View style={styles.calendarContent}>
+            {/* Calendar Header */}
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity
+                style={styles.calendarNavButton}
+                onPress={() => {
+                  const newDate = new Date(calendarDate);
+                  newDate.setMonth(newDate.getMonth() - 1);
+                  setCalendarDate(newDate);
+                }}
+              >
+                <Text style={styles.calendarNavButtonText}>‹</Text>
+              </TouchableOpacity>
+              
+              <Text style={styles.calendarTitle}>
+                {months[calendarDate.getMonth()]} {calendarDate.getFullYear()}
+              </Text>
+              
+              <TouchableOpacity
+                style={styles.calendarNavButton}
+                onPress={() => {
+                  const newDate = new Date(calendarDate);
+                  newDate.setMonth(newDate.getMonth() + 1);
+                  setCalendarDate(newDate);
+                }}
+              >
+                <Text style={styles.calendarNavButtonText}>›</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Days of Week */}
+            <View style={styles.daysOfWeek}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                <Text key={index} style={styles.dayOfWeekText}>{day}</Text>
+              ))}
+            </View>
+
+            {/* Calendar Days */}
+            <View style={styles.calendarDays}>
+              {days.map((day, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.calendarDay,
+                    day === currentDay && 
+                    calendarDate.getMonth() === currentMonth && 
+                    calendarDate.getFullYear() === currentYear && styles.calendarToday,
+                    !day && styles.calendarEmptyDay
+                  ]}
+                  onPress={() => {
+                    if (day) {
+                      const selectedDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+                      const formattedDate = selectedDate.toISOString().split('T')[0];
+                      
+                      if (calendarType === 'start') {
+                        setCustomStartDate(formattedDate);
+                        setShowStartCalendar(false);
+                      } else {
+                        setCustomEndDate(formattedDate);
+                        setShowEndCalendar(false);
+                      }
+                    }
+                  }}
+                  disabled={!day}
+                >
+                  <Text style={[
+                    styles.calendarDayText,
+                    !day && styles.calendarEmptyDayText,
+                    day === currentDay && 
+                    calendarDate.getMonth() === currentMonth && 
+                    calendarDate.getFullYear() === currentYear && styles.calendarTodayText
+                  ]}>
+                    {day || ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Calendar Footer */}
+            <View style={styles.calendarFooter}>
+              <TouchableOpacity
+                style={styles.calendarCancelButton}
+                onPress={() => {
+                  setShowStartCalendar(false);
+                  setShowEndCalendar(false);
+                }}
+              >
+                <Text style={styles.calendarCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.calendarTodayButton}
+                onPress={() => {
+                  const today = new Date();
+                  setCalendarDate(today);
+                }}
+              >
+                <Text style={styles.calendarTodayButtonText}>Today</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   const handleBack = () => {
@@ -339,25 +511,30 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
           {/* Custom Date Inputs */}
           {selectedFilter === 'custom' && (
             <View style={styles.customDateContainer}>
-              <TextInput
-                style={styles.dateInput}
-                placeholder="Start Date (YYYY-MM-DD)"
-                placeholderTextColor="#999"
-                value={customStartDate}
-                onChangeText={setCustomStartDate}
-              />
-              <TextInput
-                style={styles.dateInput}
-                placeholder="End Date (YYYY-MM-DD)"
-                placeholderTextColor="#999"
-                value={customEndDate}
-                onChangeText={setCustomEndDate}
-              />
+              <TouchableOpacity
+                style={styles.dateInputButton}
+                onPress={() => openCalendar('start')}
+              >
+                <Text style={styles.dateInputText}>
+                  {customStartDate || 'Select Start Date'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.dateInputButton}
+                onPress={() => openCalendar('end')}
+              >
+                <Text style={styles.dateInputText}>
+                  {customEndDate || 'Select End Date'}
+                </Text>
+              </TouchableOpacity>
+              
               <TouchableOpacity
                 style={styles.applyCustomFilterBtn}
                 onPress={applyCustomFilter}
+                disabled={!customStartDate || !customEndDate}
               >
-                <Text style={styles.applyCustomFilterText}>Apply</Text>
+                <Text style={styles.applyCustomFilterText}>Apply Filter</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -382,7 +559,7 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
               style={styles.orderCard}
             >
                <View style={styles.orderHeader}>
-    <View>
+    <View style={styles.orderInfoContainer}>
       <Text style={styles.orderId}>Order #{order.orderId || order.bookingId || order._id}</Text>
       <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
     </View>
@@ -429,6 +606,9 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
 
       {/* Bottom Navigation */}
       <BottomNavigation activeTab={activeTab} onTabPress={handleTabPress} />
+
+      {/* Calendar Modal */}
+      {renderCalendar()}
     </View>
   );
 };

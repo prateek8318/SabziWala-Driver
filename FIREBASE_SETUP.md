@@ -76,6 +76,13 @@ The Firebase service handles:
 - ✅ Background notifications
 - ✅ App opened from notification
 
+### Notification sound
+- **Background (app closed/minimized):** Uses the default notification channel `order_notifications` with system sound. No extra setup needed.
+- **In-app (socket or FCM when app is open):** To hear a sound when an order arrives while the app is open, add an MP3 file:
+  - **Android:** Place `order_notification.mp3` (lowercase, underscore only) in `android/app/src/main/res/raw/`. See that folder’s README.
+  - **iOS:** Add the same file to the Xcode project (e.g. drag into the project and ensure it’s in “Copy Bundle Resources”).
+  - If the file is missing, the app falls back to vibration/haptic feedback.
+
 ### Custom Notification Handling:
 Edit `src/services/firebase.ts` to customize:
 - Navigation logic when notification is pressed

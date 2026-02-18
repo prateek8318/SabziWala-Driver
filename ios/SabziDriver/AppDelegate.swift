@@ -22,6 +22,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeFactory = factory
 
     window = UIWindow(frame: UIScreen.main.bounds)
+    
+    // Hide status bar
+    application.isStatusBarHidden = true
 
     factory.startReactNative(
       withModuleName: "SabziDriver",

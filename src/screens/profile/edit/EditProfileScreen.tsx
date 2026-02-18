@@ -12,21 +12,19 @@ import {
 } from 'react-native';
 import GlobalHeader from '../../../components/GlobalHeader';
 import styles from './EditProfileScreen.styles';
-import { ApiService } from '../../../services/api';
+import { ApiService, IMAGE_BASE_URL } from '../../../services/api';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 
 const EditProfileScreen = ({ onNavigate }: any) => {
   const [driverProfile, setDriverProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [imageLoadErrors, setImageLoadErrors] = useState<{[key: string]: number}>({});
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     mobileNo: '',
-    vehicleType: '',
-    vehicleNumber: '',
-    dlNumber: '',
+    email: '',
   });
 
   useEffect(() => {
@@ -41,11 +39,8 @@ const EditProfileScreen = ({ onNavigate }: any) => {
         setDriverProfile(profile);
         setFormData({
           name: profile.name || '',
-          email: profile.email || '',
           mobileNo: profile.mobileNo || '',
-          vehicleType: profile.vehicleType || '',
-          vehicleNumber: profile.vehicleNumber || '',
-          dlNumber: profile.dlNumber || '',
+          email: profile.email || '',
         });
       }
     } catch (error) {
@@ -99,14 +94,24 @@ const EditProfileScreen = ({ onNavigate }: any) => {
   };
 
   const handleSave = async () => {
+    // Check if any changes were made
+    const hasChanges = (
+      formData.name !== (driverProfile?.name || '') ||
+      formData.mobileNo !== (driverProfile?.mobileNo || '') ||
+      formData.email !== (driverProfile?.email || '')
+    );
+
+    if (!hasChanges) {
+      Alert.alert('No Changes', 'No changes were made to update.');
+      return;
+    }
+
     try {
       setLoading(true);
       const profileFormData = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value) {
-          profileFormData.append(key, value);
-        }
-      });
+      profileFormData.append('name', formData.name);
+      profileFormData.append('mobileNo', formData.mobileNo);
+      profileFormData.append('email', formData.email);
       
       const response = await ApiService.updateDriverProfile(profileFormData);
       if (response.status === 200) {
@@ -134,81 +139,116 @@ const EditProfileScreen = ({ onNavigate }: any) => {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Avatar */}
+        {/* Avatar - Editable */}
         <View style={styles.avatarWrapper}>
-          <TouchableOpacity onPress={handleImagePick}>
-            {driverProfile?.image ? (
-              <Image
-                source={{ uri: `http://192.168.1.23:5002/${driverProfile.image.replace(/\\/g, '/')}` }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Image
-                source={require('../../../images/profile.png')}
-                style={styles.profileImage}
-              />
-            )}
+          <TouchableOpacity onPress={handleImagePick} disabled={loading}>
+            <View style={styles.avatar}>
+              {driverProfile?.image ? (
+                (() => {
+                  const imagePath = driverProfile.image.replace(/\\/g, '/');
+                  // Remove 'public/' prefix if it exists since IMAGE_BASE_URL already includes it
+                  const cleanPath = imagePath.startsWith('public/') ? imagePath.substring(6) : imagePath;
+                  // Ensure no leading slash to avoid double slashes
+                  const normalizedPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+                  
+                  const imageUrl = `${IMAGE_BASE_URL}${normalizedPath}`;
+                  const fallbackUrl = `${IMAGE_BASE_URL}${imagePath}`;
+                  const alternativeUrl1 = `${IMAGE_BASE_URL.replace('/public/', '/')}${normalizedPath}`;
+                  const alternativeUrl2 = `${IMAGE_BASE_URL}driver/${driverProfile.image.split('\\').pop()}`;
+                  
+                  const errorCount = imageLoadErrors[driverProfile.image] || 0;
+                  const urls = [imageUrl, fallbackUrl, alternativeUrl1, alternativeUrl2];
+                  const currentUrl = urls[Math.min(errorCount, urls.length - 1)];
+                  
+                  return (
+                    <Image 
+                      source={{ uri: currentUrl }} 
+                      style={styles.profileImage}
+                      onError={(e) => {
+                        if (errorCount < urls.length - 1) {
+                          setImageLoadErrors(prev => ({
+                            ...prev,
+                            [driverProfile.image]: errorCount + 1
+                          }));
+                        }
+                      }}
+                      onLoad={() => {
+                        setImageLoadErrors(prev => {
+                          const newState = { ...prev };
+                          delete newState[driverProfile.image];
+                          return newState;
+                        });
+                      }}
+                    />
+                  );
+                })()
+              ) : (
+                <Image
+                  source={require('../../../images/profile.png')}
+                  style={styles.profileImage}
+                />
+              )}
+            </View>
           </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleImagePick}>
-            <Text style={styles.editText}>Edit</Text>
+          <TouchableOpacity onPress={handleImagePick} disabled={loading}>
+            <Text style={styles.editText}>Edit Photo</Text>
           </TouchableOpacity>
         </View>
 
 
-        {/* Inputs */}
+        {/* Editable Fields */}
         <Input 
           value={formData.name} 
           onChangeText={(text: string) => setFormData({...formData, name: text})}
           placeholder="Name"
+          editable={true}
         />
         <Input 
           value={formData.mobileNo} 
           onChangeText={(text: string) => setFormData({...formData, mobileNo: text})}
           placeholder="Mobile Number"
-          editable={false}
+          editable={true}
         />
         <Input 
           value={formData.email} 
           onChangeText={(text: string) => setFormData({...formData, email: text})}
           placeholder="Email"
+          editable={true}
         />
 
-        {/* ID Proof */}
-        <View style={styles.inputWithIcon}>
-          <TextInput
-            placeholder="ID Proof"
-            style={styles.input}
-            placeholderTextColor="#999"
+        {/* Read-only Fields */}
+        <View style={styles.readOnlySection}>
+          <Text style={styles.readOnlyTitle}>Vehicle Information (Read-only)</Text>
+          <Input 
+            value={driverProfile?.vehicleType || ''} 
+            placeholder="Vehicle Type" 
+            editable={false}
+            onChangeText={() => {}}
           />
-          <Text style={styles.clip}>📎</Text>
+          <Input 
+            value={driverProfile?.vehicleNumber || ''} 
+            placeholder="Vehicle Number" 
+            editable={false}
+            onChangeText={() => {}}
+          />
+          <Input 
+            value={driverProfile?.dlNumber || ''} 
+            placeholder="DL Number" 
+            editable={false}
+            onChangeText={() => {}}
+          />
         </View>
 
-        <Input 
-          value={formData.vehicleType} 
-          onChangeText={(text: string) => setFormData({...formData, vehicleType: text})}
-          placeholder="Vehicle Type" 
-          rightIcon="⌄" 
-        />
-        <Input 
-          value={formData.vehicleNumber} 
-          onChangeText={(text: string) => setFormData({...formData, vehicleNumber: text})}
-          placeholder="Vehicle Number" 
-        />
-
-        {/* Vehicle RC */}
-        <Text style={styles.sectionTitle}>Vehicle RC</Text>
-
-        <View style={styles.uploadRow}>
-          <UploadBox label="Front Image" />
-          <UploadBox label="Back Image" />
-        </View>
-
-        <Input 
-          value={formData.dlNumber} 
-          onChangeText={(text: string) => setFormData({...formData, dlNumber: text})}
-          placeholder="DL Number" 
-        />
+        {/* Vehicle RC - Only for bikes */}
+        {driverProfile?.vehicleType?.toLowerCase() === 'bike' && (
+          <View style={styles.rcSection}>
+            <Text style={styles.sectionTitle}>Vehicle RC</Text>
+            <View style={styles.uploadRow}>
+              <UploadBox label="Front Image" />
+              <UploadBox label="Back Image" />
+            </View>
+          </View>
+        )}
 
         {/* Save */}
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
@@ -223,13 +263,15 @@ const EditProfileScreen = ({ onNavigate }: any) => {
   );
 };
 
-const Input = ({ value, placeholder, rightIcon }: any) => (
+const Input = ({ value, placeholder, rightIcon, editable = true, onChangeText }: any) => (
   <View style={styles.inputWrapper}>
     <TextInput
       value={value}
       placeholder={placeholder}
       placeholderTextColor="#999"
       style={styles.input}
+      editable={editable}
+      onChangeText={onChangeText}
     />
     {rightIcon && <Text style={styles.rightIcon}>{rightIcon}</Text>}
   </View>

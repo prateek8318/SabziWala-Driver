@@ -15,6 +15,32 @@ const TermsConditionsScreen: React.FC<TermsConditionsScreenProps> = ({ onNavigat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
+  // Function to remove HTML tags and format content
+  const stripHtmlTags = (html: string): string => {
+    if (!html) return '';
+    
+    // Remove HTML tags
+    let text = html.replace(/<[^>]*>/g, '');
+    
+    // Replace HTML entities
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+    text = text.replace(/&nbsp;/g, ' ');
+    
+    // Clean up extra whitespace
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    // Add proper line breaks for common HTML elements
+    text = text.replace(/\.\s*/g, '.\n\n');
+    text = text.replace(/\d+\.\s*/g, (match) => match + '\n');
+    text = text.replace(/([.!?])\s*/g, '$1\n\n');
+    
+    return text;
+  };
+
   useEffect(() => {
     fetchTermsConditions();
   }, []);
@@ -62,7 +88,7 @@ const TermsConditionsScreen: React.FC<TermsConditionsScreenProps> = ({ onNavigat
             </TouchableOpacity>
           </View>
         ) : termsData ? (
-          <Text style={styles.text}>{termsData.content}</Text>
+          <Text style={styles.text}>{stripHtmlTags(termsData.content)}</Text>
         ) : (
           <Text style={styles.noDataText}>No terms and conditions available.</Text>
         )}

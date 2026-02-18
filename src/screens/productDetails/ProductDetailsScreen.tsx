@@ -115,6 +115,84 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ orderId, so
     );
   }
 
+  // Enhanced data extraction functions
+  const getCustomerName = () => {
+    console.log('=== PRODUCT DETAILS CUSTOMER DEBUG ===');
+    console.log('Full orderDetails:', orderDetails);
+    console.log('shippingAddress:', shippingAddress);
+    console.log('userId:', userId);
+    console.log('========================');
+    
+    const nameFields = [
+      shippingAddress.receiverName,
+      shippingAddress.name,
+      shippingAddress.fullName,
+      userId.name,
+      userId.customerName,
+      userId.fullName,
+      orderDetails.customerName,
+      orderDetails.receiverName,
+      orderDetails.customer,
+      orderDetails.buyerName,
+      orderDetails.userName
+    ].filter(Boolean);
+    
+    console.log('Customer name fields found:', nameFields);
+    
+    if (nameFields.length > 0) {
+      return nameFields[0];
+    }
+    
+    return 'N/A';
+  };
+
+  const getDeliveryAddress = () => {
+    // Try multiple address sources
+    const addressSources = [
+      shippingAddress,
+      orderDetails.delivery,
+      orderDetails.dropAddress
+    ];
+    
+    for (const addr of addressSources) {
+      if (!addr) continue;
+      
+      const parts = [
+        addr.houseNoOrFlatNo || addr.address1,
+        addr.floor || addr.address2,
+        addr.landmark,
+        addr.city,
+        addr.pincode
+      ].filter(Boolean);
+      
+      if (parts.length > 0) {
+        return parts.join(', ');
+      }
+    }
+    
+    return 'N/A';
+  };
+
+  const getPaymentMode = () => {
+    console.log('=== PRODUCT DETAILS PAYMENT DEBUG ===');
+    const paymentFields = [
+      orderDetails.paymentMethod,
+      orderDetails.paymentMode,
+      orderDetails.payment_type,
+      orderDetails.payment,
+      orderDetails.paymentOption
+    ].filter(Boolean);
+    
+    console.log('Payment fields found:', paymentFields);
+    console.log('========================');
+    
+    if (paymentFields.length > 0) {
+      return getPaymentModeText(paymentFields[0]);
+    }
+    
+    return 'N/A';
+  };
+
   const products = orderDetails.products || [];
   const orderIdDisplay = orderDetails.orderId || orderId;
   const shippingAddress = orderDetails.shippingAddress || {};
@@ -123,20 +201,10 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ orderId, so
     ? 'Delivered'
     : toTitleCase(orderDetails.status || orderDetails.orderStatus || 'Ongoing');
 
-  // Construct full address from shippingAddress
-  const getFullAddress = () => {
-    if (!shippingAddress.houseNoOrFlatNo && !shippingAddress.landmark && !shippingAddress.city) {
-      return 'N/A';
-    }
-    const parts = [
-      shippingAddress.houseNoOrFlatNo,
-      shippingAddress.floor,
-      shippingAddress.landmark,
-      shippingAddress.city,
-      shippingAddress.pincode
-    ].filter(Boolean);
-    return parts.join(', ');
-  };
+  // Get enhanced data
+  const customerName = getCustomerName();
+  const deliveryAddress = getDeliveryAddress();
+  const paymentMode = getPaymentMode();
 
   return (
     <View style={styles.container}>
@@ -166,8 +234,8 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ orderId, so
           {/* Delivery Address */}
           <View style={styles.addressSection}>
             <View style={styles.addressRow}>
-              <Text style={styles.addressLabel}>Delivery Address :</Text>
-              <Text style={styles.addressText}>{getFullAddress()}</Text>
+              <Text style={styles.addressLabel}>Delivery Address:</Text>
+              <Text style={styles.addressText}>{deliveryAddress}</Text>
             </View>
             <View style={styles.metaRow}>
               <Text style={styles.metaText}>Time: {formatTime(orderDetails.createdAt)}</Text>
@@ -180,7 +248,7 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ orderId, so
           {/* Customer Info */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Customer Name:</Text>
-            <Text style={styles.infoValue}>{userId.name || shippingAddress.receiverName || 'N/A'}</Text>
+            <Text style={styles.infoValue}>{customerName}</Text>
           </View>
           {userId.mobileNo && (
             <View style={styles.infoRow}>
@@ -196,7 +264,7 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ orderId, so
           )}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Payment Mode:</Text>
-            <Text style={styles.infoValue}>{getPaymentModeText(orderDetails.paymentMethod)}</Text>
+            <Text style={styles.infoValue}>{paymentMode}</Text>
           </View>
 
           <View style={styles.divider} />
@@ -205,22 +273,47 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ orderId, so
           <Text style={styles.sectionTitle}>{products.length} Items In order</Text>
 
           {products.map((product: any, index: number) => {
-            const productInfo = product.productId || {};
-            const productName = productInfo.name || 'Product Name';
-            const productDescription = productInfo.description || '';
-            const quantity = product.quantity || 1;
-            const price = product.price || 0;
+            console.log('=== PRODUCT DEBUG ===');
+            console.log('Product data:', product);
+            console.log('Product keys:', Object.keys(product));
+            
+            // Enhanced product info extraction
+            const productInfo = product.productId || product.product || product;
+            console.log('ProductInfo:', productInfo);
+            
+            const productName = productInfo?.name || product.name || product.productName || 'Product Name';
+            const productDescription = productInfo?.description || product.description || '';
+            const quantity = product.quantity || product.qty || 1;
+            const price = product.price || product.amount || product.unitPrice || 0;
             const totalPrice = price * quantity;
 
-            const productImage =
-              productInfo.images && productInfo.images.length > 0 ? productInfo.images[0] : null;
+            // Enhanced image extraction
+            let productImage = null;
+            
+            // Try multiple image sources
+            if (productInfo?.images && productInfo.images.length > 0) {
+              productImage = productInfo.images[0];
+            } else if (product.images && product.images.length > 0) {
+              productImage = product.images[0];
+            } else if (product.image) {
+              productImage = product.image;
+            } else if (product.productImage) {
+              productImage = product.productImage;
+            } else if (product.thumbnail) {
+              productImage = product.thumbnail;
+            }
+            
+            console.log('Product image found:', productImage);
             const imageUrl = resolveImageUrl(productImage);
+            console.log('Image URL:', imageUrl);
 
             return (
               <View key={product._id || index} style={styles.productItem}>
                 <Image
                   source={imageUrl ? { uri: imageUrl } : require('../../images/profile.png')}
                   style={styles.productImage}
+                  defaultSource={require('../../images/profile.png')}
+                  onError={() => console.log('Image load failed for:', productImage)}
                 />
                 <View style={styles.productInfo}>
                   <Text style={styles.productName}>{productName}</Text>

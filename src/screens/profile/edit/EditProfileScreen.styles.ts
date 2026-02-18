@@ -44,6 +44,27 @@ export default StyleSheet.create({
     color: '#000',
   },
 
+  readOnlySection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+
+  readOnlyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 15,
+  },
+
+  rcSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+
   inputWrapper: {
     marginBottom: 14,
     position: 'relative',

@@ -10,40 +10,9 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import socketService from '../services/socketService';
+import { playNotificationSound } from '../utils/notificationSound';
 
 const { width } = Dimensions.get('window');
-
-// Add sound playing function
-const playNotificationSound = () => {
-  try {
-    const { Sound } = require('react-native-sound');
-    
-    // Set the audio category for iOS
-    Sound.setCategory('Playback');
-    
-    const notificationSound = new Sound('order-notification.mp3', Sound.MAIN_BUNDLE, (error: any) => {
-      if (error) {
-        console.log('❌ Sound loading error in OrderNotification:', error);
-      } else {
-        console.log('✅ Sound loaded successfully in OrderNotification');
-        notificationSound.play((success: any) => {
-          if (success) {
-            console.log('✅ Sound played successfully in OrderNotification');
-          } else {
-            console.log('❌ Sound playback failed in OrderNotification');
-          }
-        });
-        
-        // Release sound after playing
-        setTimeout(() => {
-          notificationSound.release();
-        }, 2000);
-      }
-    });
-  } catch (error: any) {
-    console.log('❌ React-native-sound not available in OrderNotification:', error);
-  }
-};
 
 interface OrderData {
   orderId: string;

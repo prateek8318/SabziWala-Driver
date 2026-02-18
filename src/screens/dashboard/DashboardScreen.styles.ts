@@ -300,15 +300,23 @@ export default StyleSheet.create({
 
   },
 
+  scrollContent: {
+
+    paddingBottom: scaleSize(30),
+
+    flexGrow: 1,
+
+  },
+
   orderCard: {
 
     backgroundColor: '#E0FFF4',
 
     borderRadius: scaleSize(10),
 
-    padding: scaleSize(15),
+    padding: isSmallScreen ? scaleSize(12) : scaleSize(15),
 
-    marginBottom: scaleSize(35),
+    marginBottom: isSmallScreen ? scaleSize(20) : scaleSize(70),
 
     shadowColor: '#000',
 
@@ -330,9 +338,9 @@ export default StyleSheet.create({
 
     borderRadius: scaleSize(10),
 
-    padding: scaleSize(15),
+    padding: isSmallScreen ? scaleSize(12) : scaleSize(15),
 
-    marginBottom: scaleSize(35),
+    marginBottom: isSmallScreen ? scaleSize(20) : scaleSize(70),
 
     shadowColor: '#000',
 
@@ -868,9 +876,9 @@ export default StyleSheet.create({
 
   timerCircleAccepted: {
 
-    width: scaleSize(50),
+    width: scaleSize(55),
 
-    height: scaleSize(50),
+    height: scaleSize(55),
 
     borderRadius: scaleSize(25),
 
