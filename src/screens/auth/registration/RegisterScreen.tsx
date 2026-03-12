@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Image, Alert, Modal, StatusBar, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Image, Alert, Modal, StatusBar, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchImageLibrary, launchCamera, ImagePickerResponse, MediaType } from 'react-native-image-picker';
 import Toast from 'react-native-toast-message';
@@ -378,7 +378,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSubmit, onBackPress, 
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView 
+      style={[styles.container, { paddingTop: insets.top }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
       {/* 🔹 WHITE HEADER */}
@@ -387,7 +391,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSubmit, onBackPress, 
       </View>
 
       {/* 🔹 SCROLLABLE CONTENT */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.formContainer}>
           <Text style={styles.formTitle}>Enter your details to proceed further </Text>
           {/* Upload Your Photo */}
@@ -615,7 +624,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSubmit, onBackPress, 
         </View>
       </ScrollView>
 
-
       {/* Image Picker Bottom Sheet */}
       <Modal
         visible={showImagePickerBottomSheet}
@@ -690,7 +698,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSubmit, onBackPress, 
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

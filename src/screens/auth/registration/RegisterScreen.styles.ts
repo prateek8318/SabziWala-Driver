@@ -35,6 +35,11 @@ export default StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: scaleHeight(100),
+  },
   formTitle: {
     fontSize: scaleFont(22),
     fontWeight: '500',

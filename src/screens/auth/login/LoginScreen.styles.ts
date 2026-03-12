@@ -18,7 +18,7 @@ export default StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffffff',
   },
 
   /* 🔹 HEADER */
@@ -26,13 +26,15 @@ export default StyleSheet.create({
     height: scaleHeight(240),
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: scaleHeight(50),
   },
 
   headerVector: {
     position: 'absolute',
     width: '100%',
-    height: scaleHeight(320),
+    height: scaleHeight(370),
     resizeMode: 'stretch',
+    top: -scaleHeight(80),
   },
 
   headerText: {
@@ -46,7 +48,7 @@ export default StyleSheet.create({
   content: {
     flex: 0.7,
     alignItems: 'center',
-    paddingTop: scaleHeight(50),
+    paddingTop: scaleHeight(10),
     paddingBottom: scaleHeight(60),
   },
 

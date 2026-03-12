@@ -226,6 +226,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     fetchOrders();
   }, []);
 
+  // Sync isOnline state with driver profile status
+  useEffect(() => {
+    if (driverProfile && driverProfile.status !== undefined) {
+      setIsOnline(driverProfile.status === 'active');
+    }
+  }, [driverProfile]);
+
   // Socket connection effect
   useEffect(() => {
     if (driverProfile?._id) {
@@ -547,13 +554,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       const status = newValue ? 'active' : 'inactive';
       console.log('Toggling driver status to:', status);
       
-      const response = await ApiService.toggleDriverStatus(driverProfile._id, status);
+      const response = await ApiService.toggleDriverStatus(driverProfile._id, newValue);
       
       if (response.data.success) {
         console.log('Status updated successfully:', response.data.message);
         setDriverProfile((prev: any) => ({
           ...prev,
-          status: newValue
+          status: newValue ? 'active' : 'inactive'
         }));
         
         // Show success toast notification

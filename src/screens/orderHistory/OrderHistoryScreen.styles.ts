@@ -2,9 +2,8 @@ import { StyleSheet, Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
-// Responsive scaling factors
-const scale = width / 375; // Base width (iPhone 11)
-const verticalScale = height / 812; // Base height (iPhone 11)
+const scale = width / 375;
+const verticalScale = height / 812;
 
 const responsiveSize = (size: number) => size * scale;
 const responsiveVerticalSize = (size: number) => size * verticalScale;
@@ -24,7 +23,7 @@ export default StyleSheet.create({
   searchBox: {
     flex: 1,
     height: responsiveVerticalSize(44),
-    flexDirection: 'row', 
+    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: responsiveSize(10),
@@ -33,13 +32,11 @@ export default StyleSheet.create({
     paddingHorizontal: responsiveSize(12),
   },
   searchIcon: {
-    width: responsiveSize(28),
-    height: responsiveSize(28),
-    marginLeft: responsiveSize(12),
+    width: responsiveSize(20),
+    height: responsiveSize(20),
     marginRight: responsiveSize(8),
     tintColor: '#086B48',
   },
-
   searchInput: {
     flex: 1,
     fontSize: responsiveSize(13),
@@ -47,13 +44,6 @@ export default StyleSheet.create({
     color: '#111',
     paddingVertical: 0,
   },
-
-  searchPlaceholder: {
-    fontSize: responsiveSize(14),
-    fontFamily: 'Poppins-Regular',
-    color: '#086B48',
-  },
-
   filterBtn: {
     width: responsiveSize(44),
     height: responsiveSize(44),
@@ -63,91 +53,78 @@ export default StyleSheet.create({
     marginLeft: responsiveSize(10),
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
-
+  filterBtnActive: {
+    backgroundColor: '#086B48',
+  },
   filterIcon: {
     width: responsiveSize(20),
     height: responsiveSize(20),
     tintColor: '#086B48',
   },
 
-
-  // Order Tabs
-  orderTabs: {
+  // Active filter chip
+  activeFilterRow: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    marginHorizontal: responsiveSize(20),
-    marginTop: responsiveVerticalSize(15),
-    borderRadius: responsiveSize(25),
-    padding: responsiveSize(4),
-    marginBottom: responsiveVerticalSize(15),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingHorizontal: responsiveSize(20),
+    marginBottom: responsiveVerticalSize(8),
   },
-  
-  tabButton: {
-    flex: 1,
-    paddingVertical: responsiveVerticalSize(12),
-    borderRadius: responsiveSize(20),
+  activeFilterChip: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#E9FFF6',
+    borderRadius: responsiveSize(20),
+    paddingHorizontal: responsiveSize(12),
+    paddingVertical: responsiveVerticalSize(5),
+    borderWidth: 1,
+    borderColor: '#086B48',
+    gap: responsiveSize(8),
   },
-  
-  activeTab: {
-    backgroundColor: '#086B48',
+  activeFilterText: {
+    fontSize: responsiveSize(12),
+    fontFamily: 'Poppins-Medium',
+    color: '#086B48',
   },
-  
-  tabText: {
-    fontSize: responsiveSize(14),
-    fontWeight: '600',
-    color: '#666',
+  activeFilterClear: {
+    fontSize: responsiveSize(12),
+    color: '#086B48',
+    fontWeight: '700',
   },
-  
-  activeTabText: {
-    color: '#fff',
-  },
-  
+
   // Loading & Empty States
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
   loadingText: {
     marginTop: responsiveVerticalSize(10),
     fontSize: responsiveSize(16),
     color: '#666',
   },
-  
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
   emptyText: {
     fontSize: responsiveSize(16),
     color: '#666',
   },
-  
+
   // Orders List
   ordersList: {
     flex: 1,
     paddingHorizontal: responsiveSize(20),
     marginBottom: responsiveVerticalSize(70),
   },
-  
   orderCard: {
     backgroundColor: '#E9FFF6',
     borderRadius: responsiveSize(14),
     padding: responsiveSize(16),
     marginBottom: responsiveVerticalSize(14),
   },
-
-  
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -155,25 +132,20 @@ export default StyleSheet.create({
     marginBottom: responsiveVerticalSize(12),
     gap: responsiveSize(8),
   },
-
   orderInfoContainer: {
     flex: 1,
     marginRight: responsiveSize(8),
   },
-  
   orderId: {
     fontSize: responsiveSize(14),
     fontFamily: 'Poppins-SemiBold',
     color: '#111',
   },
-
-  
   orderDate: {
     fontSize: responsiveSize(12),
     color: '#666',
     marginTop: responsiveVerticalSize(2),
   },
-  
   statusBadge: {
     paddingHorizontal: responsiveSize(10),
     paddingVertical: responsiveVerticalSize(4),
@@ -182,8 +154,6 @@ export default StyleSheet.create({
     minWidth: responsiveSize(80),
     maxWidth: responsiveSize(120),
   },
-
-  
   statusText: {
     fontSize: responsiveSize(11),
     fontFamily: 'Poppins-Medium',
@@ -191,93 +161,22 @@ export default StyleSheet.create({
     textTransform: 'capitalize',
     textAlign: 'center',
   },
-  expandedSection: {
-    marginTop: responsiveVerticalSize(14),
-    paddingTop: responsiveVerticalSize(12),
-    borderTopWidth: 1,
-    borderTopColor: '#D1FAE5',
-  },
-
-  label: {
-    fontSize: responsiveSize(12),
-    color: '#555',
-    marginTop: responsiveVerticalSize(6),
-    fontFamily: 'Poppins-Regular',
-  },
-
-  value: {
-    fontSize: responsiveSize(13),
-    color: '#111',
-    fontFamily: 'Poppins-SemiBold',
-  },
-
-  sectionTitle: {
-    fontSize: responsiveSize(13),
-    fontFamily: 'Poppins-SemiBold',
-    marginBottom: responsiveVerticalSize(4),
-  },
-
-  locationText: {
-    fontSize: responsiveSize(12),
-    color: '#111',
-  },
-
-  locationSection: {
-    marginBottom: responsiveVerticalSize(12),
-  },
-
-  subText: {
-    fontSize: responsiveSize(11),
-    color: '#666',
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: responsiveVerticalSize(10),
-  },
-
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: responsiveVerticalSize(6),
-  },
-
-  statusButton: {
-    marginTop: responsiveVerticalSize(14),
-    backgroundColor: '#E5E7EB',
-    paddingVertical: responsiveVerticalSize(10),
-    borderRadius: responsiveSize(20),
-    alignItems: 'center',
-  },
-
-  statusButtonText: {
-    fontSize: responsiveSize(13),
-    fontFamily: 'Poppins-Medium',
-    textTransform: 'capitalize',
-  },
-
-  
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: responsiveVerticalSize(6),
   },
-  summaryLeft: {
-    flex: 1,
-  },
-  summaryLabel: {
+  label: {
     fontSize: responsiveSize(12),
-    fontFamily: 'Poppins-Regular',
-    color: '#333',
+    color: '#555',
     marginTop: responsiveVerticalSize(6),
+    fontFamily: 'Poppins-Regular',
   },
-  summaryValue: {
-    fontSize: responsiveSize(12),
-    fontFamily: 'Poppins-SemiBold',
+  value: {
+    fontSize: responsiveSize(13),
     color: '#111',
-    marginTop: responsiveVerticalSize(2),
+    fontFamily: 'Poppins-SemiBold',
   },
   chevronWrap: {
     width: responsiveSize(28),
@@ -291,138 +190,149 @@ export default StyleSheet.create({
     width: responsiveSize(20),
     height: responsiveSize(20),
   },
-  
-  
-  detailRow: {
-    marginBottom: responsiveVerticalSize(8),
-  },
-  
-  detailLabel: {
-    fontSize: responsiveSize(12),
-    color: '#555',
-    fontFamily: 'Poppins-Regular',
-  },
-  
-  detailValue: {
-    fontSize: responsiveSize(13),
-    color: '#111',
-    fontFamily: 'Poppins-SemiBold',
-  },
-  
-  orderStatusPill: {
-    marginTop: responsiveVerticalSize(12),
-    backgroundColor: '#E5E7EB',
-    paddingVertical: responsiveVerticalSize(8),
-    borderRadius: responsiveSize(20),
-    alignItems: 'center',
-  },
-  
-  orderStatusText: {
-    fontSize: responsiveSize(13),
-    color: '#111',
-    fontFamily: 'Poppins-Medium',
-    textTransform: 'capitalize',
-  },
-  
 
   // Filter Dropdown
   filterDropdown: {
     backgroundColor: '#fff',
     marginHorizontal: responsiveSize(20),
-    marginBottom: responsiveVerticalSize(15),
-    borderRadius: responsiveSize(10),
+    marginBottom: responsiveVerticalSize(10),
+    borderRadius: responsiveSize(12),
     borderWidth: 1,
     borderColor: '#e0e0e0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
   },
-
   filterOption: {
-    paddingVertical: responsiveVerticalSize(12),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: responsiveVerticalSize(13),
     paddingHorizontal: responsiveSize(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f5f5f5',
   },
-
+  filterOptionActive: {
+    backgroundColor: '#F0FFF8',
+  },
   filterOptionText: {
     fontSize: responsiveSize(14),
     color: '#333',
+    fontFamily: 'Poppins-Regular',
+  },
+  filterOptionTextActive: {
+    color: '#086B48',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  filterCheckmark: {
+    color: '#086B48',
+    fontSize: responsiveSize(14),
+    fontWeight: '700',
   },
 
+  // Custom Date Range
   customDateContainer: {
     padding: responsiveSize(16),
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    backgroundColor: '#FAFFFE',
   },
-
-  dateInput: {
-    backgroundColor: '#f8f8f8',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: responsiveSize(8),
+  customDateLabel: {
+    fontSize: responsiveSize(13),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#086B48',
+    marginBottom: responsiveVerticalSize(12),
+    textAlign: 'center',
+  },
+  datePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: responsiveVerticalSize(12),
+    gap: responsiveSize(6),
+  },
+  dateArrow: {
+    paddingHorizontal: responsiveSize(4),
+  },
+  dateArrowText: {
+    fontSize: responsiveSize(16),
+    color: '#086B48',
+    fontWeight: '600',
+  },
+  dateInputButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#086B48',
+    borderRadius: responsiveSize(10),
     paddingHorizontal: responsiveSize(12),
-    paddingVertical: responsiveVerticalSize(10),
-    marginBottom: responsiveVerticalSize(10),
-    fontSize: responsiveSize(14),
-    color: '#333',
-  },
-
-  applyCustomFilterBtn: {
-    backgroundColor: '#086B48',
-    borderRadius: responsiveSize(8),
     paddingVertical: responsiveVerticalSize(10),
     alignItems: 'center',
   },
-
+  dateInputButtonFilled: {
+    backgroundColor: '#E9FFF6',
+    borderColor: '#086B48',
+  },
+  dateInputLabel: {
+    fontSize: responsiveSize(10),
+    color: '#086B48',
+    fontFamily: 'Poppins-Medium',
+    marginBottom: responsiveVerticalSize(2),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateInputText: {
+    fontSize: responsiveSize(12),
+    color: '#999',
+    fontFamily: 'Poppins-Regular',
+  },
+  dateInputTextFilled: {
+    color: '#111',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  applyCustomFilterBtn: {
+    backgroundColor: '#086B48',
+    borderRadius: responsiveSize(10),
+    paddingVertical: responsiveVerticalSize(12),
+    alignItems: 'center',
+  },
+  applyCustomFilterBtnDisabled: {
+    backgroundColor: '#9FC9B8',
+  },
   applyCustomFilterText: {
     color: '#fff',
     fontSize: responsiveSize(14),
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
 
-  // Date Input Button Styles
-  dateInputButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#086B48',
-    borderRadius: responsiveSize(8),
-    paddingHorizontal: responsiveSize(16),
-    paddingVertical: responsiveVerticalSize(12),
-    marginBottom: responsiveVerticalSize(10),
-    alignItems: 'center',
-  },
-
-  dateInputText: {
-    fontSize: responsiveSize(14),
-    color: '#333',
-    fontWeight: '500',
-  },
-
-  // Calendar Modal Styles
+  // Calendar Modal
   calendarOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   calendarContent: {
     backgroundColor: '#fff',
-    borderRadius: responsiveSize(16),
+    borderRadius: responsiveSize(20),
     padding: responsiveSize(20),
-    width: '90%',
-    maxWidth: 350,
+    width: width * 0.88,
+    maxWidth: 360,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
   },
-
+  calendarPickingLabel: {
+    fontSize: responsiveSize(13),
+    fontFamily: 'Poppins-Medium',
+    color: '#086B48',
+    marginBottom: responsiveVerticalSize(12),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -430,115 +340,146 @@ export default StyleSheet.create({
     width: '100%',
     marginBottom: responsiveVerticalSize(16),
   },
-
   calendarNavButton: {
-    width: responsiveSize(40),
-    height: responsiveSize(40),
-    borderRadius: responsiveSize(20),
-    backgroundColor: '#f0f0f0',
+    width: responsiveSize(36),
+    height: responsiveSize(36),
+    borderRadius: responsiveSize(18),
+    backgroundColor: '#E9FFF6',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   calendarNavButtonText: {
-    fontSize: responsiveSize(18),
-    fontWeight: '600',
-    color: '#333',
-  },
-
-  calendarTitle: {
-    fontSize: responsiveSize(18),
+    fontSize: responsiveSize(20),
     fontWeight: '700',
     color: '#086B48',
+    lineHeight: responsiveSize(24),
   },
-
+  calendarTitle: {
+    fontSize: responsiveSize(16),
+    fontWeight: '700',
+    color: '#111',
+    fontFamily: 'Poppins-SemiBold',
+  },
   daysOfWeek: {
     flexDirection: 'row',
     width: '100%',
-    marginBottom: responsiveVerticalSize(8),
+    marginBottom: responsiveVerticalSize(6),
   },
-
   dayOfWeekText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: responsiveSize(12),
+    fontSize: responsiveSize(11),
     fontWeight: '600',
-    color: '#666',
+    color: '#086B48',
+    fontFamily: 'Poppins-Medium',
   },
-
   calendarDays: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     width: '100%',
     marginBottom: responsiveVerticalSize(16),
   },
-
   calendarDay: {
-    width: responsiveSize(40),
-    height: responsiveSize(40),
-    borderRadius: responsiveSize(20),
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: responsiveSize(2),
-    marginVertical: responsiveVerticalSize(2),
-    backgroundColor: '#f8f9fa',
+    marginVertical: responsiveVerticalSize(1),
   },
-
   calendarToday: {
-    backgroundColor: '#086B48',
+    borderWidth: 1.5,
+    borderColor: '#086B48',
+    borderRadius: responsiveSize(20),
   },
-
+  calendarSelected: {
+    backgroundColor: '#086B48',
+    borderRadius: responsiveSize(20),
+  },
   calendarEmptyDay: {
     backgroundColor: 'transparent',
   },
-
   calendarDayText: {
-    fontSize: responsiveSize(14),
+    fontSize: responsiveSize(13),
     fontWeight: '500',
     color: '#333',
   },
-
   calendarTodayText: {
+    color: '#086B48',
+    fontWeight: '700',
+  },
+  calendarSelectedText: {
     color: '#fff',
     fontWeight: '700',
   },
-
   calendarEmptyDayText: {
     color: 'transparent',
   },
-
   calendarFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: responsiveVerticalSize(16),
+    borderTopColor: '#f0f0f0',
+    paddingTop: responsiveVerticalSize(14),
+    gap: responsiveSize(10),
   },
-
   calendarCancelButton: {
-    backgroundColor: '#6c757d',
-    paddingVertical: responsiveVerticalSize(8),
-    paddingHorizontal: responsiveSize(20),
-    borderRadius: responsiveSize(8),
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    paddingVertical: responsiveVerticalSize(10),
+    borderRadius: responsiveSize(10),
+    alignItems: 'center',
   },
-
   calendarCancelButtonText: {
-    color: '#fff',
-    fontSize: responsiveSize(14),
-    fontWeight: '500',
+    color: '#555',
+    fontSize: responsiveSize(13),
+    fontFamily: 'Poppins-Medium',
   },
-
   calendarTodayButton: {
+    flex: 1,
     backgroundColor: '#086B48',
-    paddingVertical: responsiveVerticalSize(8),
-    paddingHorizontal: responsiveSize(20),
-    borderRadius: responsiveSize(8),
+    paddingVertical: responsiveVerticalSize(10),
+    borderRadius: responsiveSize(10),
+    alignItems: 'center',
   },
-
   calendarTodayButtonText: {
     color: '#fff',
-    fontSize: responsiveSize(14),
-    fontWeight: '600',
+    fontSize: responsiveSize(13),
+    fontFamily: 'Poppins-SemiBold',
   },
+
+  // Legacy / unused but kept for safety
+  expandedSection: {
+    marginTop: responsiveVerticalSize(14),
+    paddingTop: responsiveVerticalSize(12),
+    borderTopWidth: 1,
+    borderTopColor: '#D1FAE5',
+  },
+  sectionTitle: {
+    fontSize: responsiveSize(13),
+    fontFamily: 'Poppins-SemiBold',
+    marginBottom: responsiveVerticalSize(4),
+  },
+  locationText: { fontSize: responsiveSize(12), color: '#111' },
+  locationSection: { marginBottom: responsiveVerticalSize(12) },
+  subText: { fontSize: responsiveSize(11), color: '#666' },
+  divider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: responsiveVerticalSize(10) },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: responsiveVerticalSize(6) },
+  statusButton: { marginTop: responsiveVerticalSize(14), backgroundColor: '#E5E7EB', paddingVertical: responsiveVerticalSize(10), borderRadius: responsiveSize(20), alignItems: 'center' },
+  statusButtonText: { fontSize: responsiveSize(13), fontFamily: 'Poppins-Medium', textTransform: 'capitalize' },
+  summaryLeft: { flex: 1 },
+  summaryLabel: { fontSize: responsiveSize(12), fontFamily: 'Poppins-Regular', color: '#333', marginTop: responsiveVerticalSize(6) },
+  summaryValue: { fontSize: responsiveSize(12), fontFamily: 'Poppins-SemiBold', color: '#111', marginTop: responsiveVerticalSize(2) },
+  detailRow: { marginBottom: responsiveVerticalSize(8) },
+  detailLabel: { fontSize: responsiveSize(12), color: '#555', fontFamily: 'Poppins-Regular' },
+  detailValue: { fontSize: responsiveSize(13), color: '#111', fontFamily: 'Poppins-SemiBold' },
+  orderStatusPill: { marginTop: responsiveVerticalSize(12), backgroundColor: '#E5E7EB', paddingVertical: responsiveVerticalSize(8), borderRadius: responsiveSize(20), alignItems: 'center' },
+  orderStatusText: { fontSize: responsiveSize(13), color: '#111', fontFamily: 'Poppins-Medium', textTransform: 'capitalize' },
+  orderTabs: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: responsiveSize(20), marginTop: responsiveVerticalSize(15), borderRadius: responsiveSize(25), padding: responsiveSize(4), marginBottom: responsiveVerticalSize(15) },
+  tabButton: { flex: 1, paddingVertical: responsiveVerticalSize(12), borderRadius: responsiveSize(20), alignItems: 'center' },
+  activeTab: { backgroundColor: '#086B48' },
+  tabText: { fontSize: responsiveSize(14), fontWeight: '600', color: '#666' },
+  activeTabText: { color: '#fff' },
+  searchPlaceholder: { fontSize: responsiveSize(14), fontFamily: 'Poppins-Regular', color: '#086B48' },
+  dateInput: { backgroundColor: '#f8f8f8', borderWidth: 1, borderColor: '#e0e0e0', borderRadius: responsiveSize(8), paddingHorizontal: responsiveSize(12), paddingVertical: responsiveVerticalSize(10), marginBottom: responsiveVerticalSize(10), fontSize: responsiveSize(14), color: '#333' },
 });

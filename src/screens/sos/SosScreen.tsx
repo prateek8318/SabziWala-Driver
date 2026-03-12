@@ -36,7 +36,10 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showError, setShowError] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
   const [toastAnimation] = useState(new Animated.Value(0));
+  const [successAnimation] = useState(new Animated.Value(0));
 
   const showErrorMessage = (message: string) => {
     setError(message);
@@ -57,6 +60,29 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
         useNativeDriver: true,
       }).start(() => {
         setShowError(false);
+      });
+    }, 3000);
+  };
+
+  const showSuccessMessage = (message: string) => {
+    setSuccess(message);
+    setShowSuccess(true);
+    
+    // Animate success toast in
+    Animated.timing(successAnimation, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+      Animated.timing(successAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowSuccess(false);
       });
     }, 3000);
   };
@@ -97,23 +123,80 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
   };
 
   const validateForm = (): boolean => {
-    // Check if remarks are required
-    if (sosSettings?.formSettings.requireRemarks && !remarks.trim()) {
+    // SOS type is always required
+    if (!sosType) {
+      showErrorMessage('Please select SOS type');
+      return false;
+    }
+    
+    // Basic validation - at least one field should have content
+    const hasName = name.trim().length > 0;
+    const hasMobile = mobile.trim().length > 0;
+    const hasRemarks = remarks.trim().length > 0;
+    
+    if (!hasName && !hasMobile && !hasRemarks) {
+      showErrorMessage('Please fill at least one field (name, mobile, or remarks)');
+      return false;
+    }
+    
+    // Validate name field (if filled)
+    if (hasName) {
+      if (name.trim().length < 3) {
+        showErrorMessage('Name must be at least 3 characters long');
+        return false;
+      }
+      // Check if name contains numbers
+      if (/\d/.test(name.trim())) {
+        showErrorMessage('Name should not contain numbers');
+        return false;
+      }
+    }
+    
+    // Validate remarks field (if filled)
+    if (hasRemarks) {
+      if (remarks.trim().length < 5) {
+        showErrorMessage('Remarks must be at least 5 characters long');
+        return false;
+      }
+      // Check if remarks contains numbers
+      if (/\d/.test(remarks.trim())) {
+        showErrorMessage('Remarks should not contain numbers');
+        return false;
+      }
+    }
+    
+    // Check if remarks are required based on settings
+    if (sosSettings?.formSettings.requireRemarks && !hasRemarks) {
       showErrorMessage('Please enter remarks');
       return false;
     }
     
-    // Check if emergency contact is required
+    // Check if emergency contact is required based on settings
     if (sosSettings?.formSettings.showEmergencyContact) {
-      if (!name.trim()) {
+      if (!hasName) {
         showErrorMessage('Please enter emergency contact name');
         return false;
       }
-      if (!mobile.trim() || mobile.length !== 10) {
+      if (!hasMobile || mobile.length !== 10) {
+        showErrorMessage('Please enter a valid 10-digit mobile number');
+        return false;
+      }
+    } else {
+      // If emergency contact is not required in settings but user filled it, validate the format
+      if (hasName && !hasMobile) {
+        showErrorMessage('Please enter mobile number when name is provided');
+        return false;
+      }
+      if (hasMobile && !hasName) {
+        showErrorMessage('Please enter name when mobile number is provided');
+        return false;
+      }
+      if (hasMobile && mobile.length !== 10) {
         showErrorMessage('Please enter a valid 10-digit mobile number');
         return false;
       }
     }
+    
     return true;
   };
 
@@ -165,22 +248,15 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
 
       const response = await ApiService.submitSOSRequest(sosData);
       
-      Alert.alert(
-        'Success',
-        'SOS request submitted successfully. We will contact you soon.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset form
-              setName('');
-              setMobile('');
-              setRemarks('');
-              setSosType('breakdown');
-            },
-          },
-        ]
-      );
+      showSuccessMessage('✓ SOS request submitted successfully! We will contact you soon.');
+      
+      // Reset form after showing success message
+      setTimeout(() => {
+        setName('');
+        setMobile('');
+        setRemarks('');
+        setSosType('breakdown');
+      }, 1000);
     } catch (error: any) {
       console.error('SOS submission error:', error);
       Alert.alert(
@@ -267,7 +343,11 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
                     placeholder="Your Name"
                     placeholderTextColor="#000"
                     value={name}
-                    onChangeText={setName}
+                    onChangeText={(text) => {
+                      // Only allow letters and spaces
+                      const textOnly = text.replace(/[^a-zA-Z\s]/g, '');
+                      setName(textOnly);
+                    }}
                   />
 
                   <TextInput
@@ -295,7 +375,11 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
                   multiline
                   numberOfLines={4}
                   value={remarks}
-                  onChangeText={setRemarks}
+                  onChangeText={(text) => {
+                    // Only allow letters, spaces, and basic punctuation
+                    const textOnly = text.replace(/[^a-zA-Z\s.,!?]/g, '');
+                    setRemarks(textOnly);
+                  }}
                 />
               )}
 
@@ -331,6 +415,28 @@ const SOSScreen: React.FC<SOSScreenProps> = ({ onNavigate }) => {
                 ]}
               >
                 <Text style={styles.toastText}>{error}</Text>
+              </Animated.View>
+            )}
+
+            {/* Success Toast Message */}
+            {showSuccess && (
+              <Animated.View 
+                style={[
+                  styles.successToastContainer,
+                  {
+                    opacity: successAnimation,
+                    transform: [
+                      {
+                        translateY: successAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-100, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Text style={styles.successToastText}>{success}</Text>
               </Animated.View>
             )}
 

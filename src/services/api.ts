@@ -201,7 +201,7 @@ export const ApiService = {
   },
 
   // ---- DRIVER STATUS MANAGEMENT ----
-  toggleDriverStatus: async (driverId: string, status: 'active' | 'inactive') => {
+  toggleDriverStatus: async (driverId: string, status: boolean) => {
     return await api.patch(`driver/status/${driverId}`, { status });
   },
 

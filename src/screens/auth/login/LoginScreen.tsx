@@ -61,7 +61,7 @@ const LoginScreen = ({ onSendOTP, onNavigateToRegister }: any) => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       
       <ScrollView 
