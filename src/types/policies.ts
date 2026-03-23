@@ -1,16 +1,33 @@
-export interface PolicyData {
+export interface CMSData {
   _id: string;
-  type: 'driver' | 'customer';
+  contentType: string;
   title: string;
-  content: string;
+  description: string;
+  type: 'driver' | 'customer';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  __v: number;
+}
+
+export interface CMSResponse {
+  status: boolean;
+  message: string;
+  data: CMSData[];
+}
+
+export interface PolicyData {
+  _id: string;
+  contentType: string;
+  title: string;
+  description: string;
+  type: 'driver' | 'customer';
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PolicyResponse {
-  success: boolean;
-  message?: string;
+  status: boolean;
+  message: string;
   data: PolicyData;
 }

@@ -30,6 +30,14 @@ export default StyleSheet.create({
     color: '#111',
     marginBottom: 16,
   },
+  requiredText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
   imagePlaceholder: {
     width: 120,
     height: 90,
@@ -69,6 +77,13 @@ export default StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
     color: '#fff',
+  },
+  warningText: {
+    fontSize: 11,
+    fontFamily: 'Poppins-Regular',
+    color: '#ff4444',
+    textAlign: 'center',
+    marginTop: 8,
   },
   
   // Image Picker Options Modal

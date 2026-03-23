@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Modal, Alert } from 'react-native';
 import { launchCamera, MediaType, ImagePickerResponse } from 'react-native-image-picker';
 import GlobalHeader from '../../components/GlobalHeader';
@@ -13,8 +13,14 @@ interface DeliveryImageScreenProps {
 const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNavigate }) => {
   const [uploading, setUploading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string>('');
+  const [modalVisible, setModalVisible] = useState(true);
 
   const title = useMemo(() => (orderId ? `Order #${orderId}` : 'Order'), [orderId]);
+
+  // Ensure modal is always visible when component mounts
+  useEffect(() => {
+    setModalVisible(true);
+  }, []);
 
   const handleBack = () => {
     onNavigate?.('home');
@@ -47,8 +53,14 @@ const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNa
 
   const markDelivered = async () => {
     if (!orderId) return;
+    
+    // Check if photo is required and not taken
     if (!photoUri || photoUri === 'placeholder://delivery-photo') {
-      Alert.alert('Image Required', 'Please select an image before marking as delivered');
+      Alert.alert(
+        'Photo Required', 
+        'Please take a photo before marking the order as delivered.',
+        [{ text: 'OK', style: 'default' }]
+      );
       return;
     }
     
@@ -104,10 +116,11 @@ const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNa
       <GlobalHeader title={title} onBack={handleBack} showBackButton />
 
       <View style={styles.center}>
-        <Modal visible transparent animationType="fade">
+        <Modal visible={modalVisible} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Add Photo</Text>
+              <Text style={styles.requiredText}>Photo is required to mark order as delivered</Text>
 
               <TouchableOpacity 
                 style={styles.imagePlaceholder}
@@ -137,6 +150,10 @@ const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNa
                   {uploading ? 'Uploading...' : 'Mark as Delivered'}
                 </Text>
               </TouchableOpacity>
+
+              {!photoUri || photoUri === 'placeholder://delivery-photo' ? (
+                <Text style={styles.warningText}>⚠️ Photo required before delivery</Text>
+              ) : null}
             </View>
           </View>
         </Modal>

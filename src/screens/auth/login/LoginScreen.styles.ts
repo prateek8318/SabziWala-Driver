@@ -102,6 +102,11 @@ export default StyleSheet.create({
     alignItems: 'flex-start',
   },
 
+  textContainer: {
+    flex: 1,
+    marginLeft: scaleWidth(5),
+  },
+
   checkbox: {
     width: scaleWidth(20),
     height: scaleWidth(20),
@@ -125,16 +130,21 @@ export default StyleSheet.create({
   },
 
   checkboxText: {
-    flex: 1,
     fontSize: scaleFont(14),
     lineHeight: scaleFont(18),
     color: '#666',
+    flexWrap: 'wrap',
   },
 
   linkText: {
     color: '#086B48',
     textDecorationLine: 'underline',
     fontWeight: '600',
+  },
+
+  loadingText: {
+    color: '#999',
+    fontStyle: 'italic',
   },
 
   sendOTPButton: {

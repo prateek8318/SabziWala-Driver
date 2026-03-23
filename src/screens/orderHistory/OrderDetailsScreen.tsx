@@ -172,33 +172,163 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
 
   // Drop address - construct from shippingAddress
   const getDropAddress = () => {
+    console.log('=== ADDRESS DEBUG ===');
+    console.log('shippingAddress:', shippingAddress);
+    console.log('delivery:', delivery);
+    console.log('userId:', userId);
+    console.log('rawOrder:', orderDetails.rawOrder);
+    console.log('========================');
+    
     // First try shippingAddress structure
     if (shippingAddress.houseNoOrFlatNo || shippingAddress.landmark || shippingAddress.city) {
       const parts = [
         shippingAddress.houseNoOrFlatNo,
         shippingAddress.floor,
+        shippingAddress.buildingName,
+        shippingAddress.street,
         shippingAddress.landmark,
+        shippingAddress.area,
         shippingAddress.city,
-        shippingAddress.pincode
+        shippingAddress.state,
+        shippingAddress.pincode,
+        shippingAddress.postalCode
       ].filter(Boolean);
-      if (parts.length > 0) return parts.join(', ');
+      if (parts.length > 0) {
+        console.log('Address from shippingAddress:', parts.join(', '));
+        return parts.join(', ');
+      }
     }
 
-    // Fallback to delivery object if exists
+    // Try delivery object if exists
     if (delivery.address1 || delivery.city) {
       const parts = [
         delivery.address1,
         delivery.address2,
+        delivery.street,
+        delivery.landmark,
+        delivery.area,
         delivery.city,
-        delivery.pincode
+        delivery.state,
+        delivery.pincode,
+        delivery.postalCode
       ].filter(Boolean);
-      if (parts.length > 0) return parts.join(', ');
+      if (parts.length > 0) {
+        console.log('Address from delivery:', parts.join(', '));
+        return parts.join(', ');
+      }
     }
 
-    return 'N/A';
+    // Try userId address fields
+    if (userId.address1 || userId.city) {
+      const parts = [
+        userId.address1,
+        userId.address2,
+        userId.street,
+        userId.landmark,
+        userId.area,
+        userId.city,
+        userId.state,
+        userId.pincode,
+        userId.postalCode
+      ].filter(Boolean);
+      if (parts.length > 0) {
+        console.log('Address from userId:', parts.join(', '));
+        return parts.join(', ');
+      }
+    }
+
+    // Try rawOrder address fields
+    if (orderDetails.rawOrder?.shippingAddress) {
+      const rawShipping = orderDetails.rawOrder.shippingAddress;
+      const parts = [
+        rawShipping.houseNoOrFlatNo,
+        rawShipping.floor,
+        rawShipping.buildingName,
+        rawShipping.street,
+        rawShipping.landmark,
+        rawShipping.area,
+        rawShipping.city,
+        rawShipping.state,
+        rawShipping.pincode,
+        rawShipping.postalCode
+      ].filter(Boolean);
+      if (parts.length > 0) {
+        console.log('Address from rawOrder:', parts.join(', '));
+        return parts.join(', ');
+      }
+    }
+
+    // Try direct order level address fields
+    const directParts = [
+      orderDetails.address1,
+      orderDetails.address2,
+      orderDetails.street,
+      orderDetails.landmark,
+      orderDetails.city,
+      orderDetails.state,
+      orderDetails.pincode,
+      orderDetails.postalCode
+    ].filter(Boolean);
+    
+    if (directParts.length > 0) {
+      console.log('Address from direct fields:', directParts.join(', '));
+      return directParts.join(', ');
+    }
+
+    return 'Customer Address Not Available';
   };
   const dropAddress = getDropAddress();
-  const dropPhone = shippingAddress.receiverNo || userId.mobileNo || delivery.mobile || delivery.phone || '';
+  
+  // Enhanced phone number extraction
+  const getDropPhone = () => {
+    console.log('=== PHONE DEBUG ===');
+    const phoneFields = [
+      // Try shipping address fields first
+      shippingAddress.receiverNo,
+      shippingAddress.mobileNo,
+      shippingAddress.phone,
+      shippingAddress.mobile,
+      shippingAddress.contact,
+      
+      // Then try user object
+      userId.mobileNo,
+      userId.phone,
+      userId.mobile,
+      userId.contact,
+      
+      // Then try delivery object
+      delivery.mobileNo,
+      delivery.phone,
+      delivery.mobile,
+      delivery.contact,
+      
+      // Check rawOrder
+      orderDetails.rawOrder?.shippingAddress?.receiverNo,
+      orderDetails.rawOrder?.shippingAddress?.mobileNo,
+      orderDetails.rawOrder?.user?.mobileNo,
+      orderDetails.rawOrder?.delivery?.mobileNo,
+      
+      // Check nested structures
+      orderDetails.user?.mobileNo,
+      orderDetails.user?.phone,
+      
+      // Direct order fields
+      orderDetails.customerPhone,
+      orderDetails.receiverPhone,
+      orderDetails.buyerPhone,
+    ].filter(Boolean);
+    
+    console.log('Phone fields found:', phoneFields);
+    console.log('========================');
+    
+    if (phoneFields.length > 0) {
+      return phoneFields[0].toString().trim();
+    }
+    
+    return '';
+  };
+  
+  const dropPhone = getDropPhone();
   const dropLat = userId.lat || delivery.lat;
   const dropLong = userId.long || delivery.long;
 
@@ -210,34 +340,56 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
     console.log('shippingAddress:', shippingAddress);
     console.log('userId:', userId);
     console.log('delivery:', delivery);
+    console.log('rawOrder:', orderDetails.rawOrder);
     console.log('========================');
     
-    // Try multiple possible fields for customer name
+    // Try multiple possible fields for customer name in order of priority
     const nameFields = [
-      shippingAddress.receiverName,
-      shippingAddress.name,
-      shippingAddress.fullName,
-      delivery.name,
-      delivery.customerName,
-      delivery.receiverName,
-      delivery.fullName,
-      userId.name,
-      userId.customerName,
-      userId.fullName,
+      // First try direct customer fields
       orderDetails.customerName,
       orderDetails.receiverName,
       orderDetails.customer,
       orderDetails.buyerName,
-      orderDetails.userName
+      orderDetails.userName,
+      
+      // Then try shipping address fields
+      shippingAddress.receiverName,
+      shippingAddress.name,
+      shippingAddress.fullName,
+      
+      // Then try delivery object fields
+      delivery.name,
+      delivery.customerName,
+      delivery.receiverName,
+      delivery.fullName,
+      
+      // Then try user object fields
+      userId.name,
+      userId.customerName,
+      userId.fullName,
+      userId.firstName,
+      userId.lastName,
+      
+      // Check rawOrder if available
+      orderDetails.rawOrder?.customerName,
+      orderDetails.rawOrder?.receiverName,
+      orderDetails.rawOrder?.name,
+      
+      // Check nested structures
+      orderDetails.user?.name,
+      orderDetails.user?.customerName,
+      orderDetails.user?.fullName,
     ].filter(Boolean);
     
     console.log('Customer name fields found:', nameFields);
     
     if (nameFields.length > 0) {
-      return nameFields[0];
+      const name = nameFields[0];
+      // Clean up the name if it contains extra spaces or formatting
+      return name.toString().trim();
     }
     
-    return 'N/A';
+    return 'Customer Name Not Available';
   };
   
   const customerName = getCustomerName();

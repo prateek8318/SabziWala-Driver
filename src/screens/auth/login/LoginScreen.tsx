@@ -5,11 +5,12 @@ import Toast from 'react-native-toast-message';
 import styles from './LoginScreen.styles';
 import { ApiService } from '../../../services/api';
 
-const LoginScreen = ({ onSendOTP, onNavigateToRegister }: any) => {
+const LoginScreen = ({ onSendOTP, onNavigateToRegister, onNavigateToTerms, onNavigateToPrivacy, onBackPress }: any) => {
   const insets = useSafeAreaInsets();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(false);
 
   const handleSendOTP = async () => {
     if (!agreedToTerms || phoneNumber.length !== 10) {
@@ -57,6 +58,46 @@ const LoginScreen = ({ onSendOTP, onNavigateToRegister }: any) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTermsPress = async () => {
+    try {
+      setTermsLoading(true);
+      const response = await ApiService.getTermsConditions();
+      if (response.status === 200) {
+        // Navigate to terms screen
+        onNavigateToTerms();
+      }
+    } catch (error) {
+      console.error('Terms Error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load Terms of Use',
+      });
+    } finally {
+      setTermsLoading(false);
+    }
+  };
+
+  const handlePrivacyPress = async () => {
+    try {
+      setTermsLoading(true);
+      const response = await ApiService.getPrivacyPolicy();
+      if (response.status === 200) {
+        // Navigate to privacy screen
+        onNavigateToPrivacy();
+      }
+    } catch (error) {
+      console.error('Privacy Error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load Privacy Policy',
+      });
+    } finally {
+      setTermsLoading(false);
     }
   };
 
@@ -108,11 +149,26 @@ const LoginScreen = ({ onSendOTP, onNavigateToRegister }: any) => {
             </View>
           </TouchableOpacity>
 
-          <Text style={styles.checkboxText}>
-            By signing up, you agree to our{' '}
-            <Text style={styles.linkText}>Terms of Use</Text> and{' '}
-            <Text style={styles.linkText}>Privacy Policy</Text>
-          </Text>
+          <View style={styles.textContainer}>
+            <Text style={styles.checkboxText}>
+              By signing up, you agree to our{' '}
+              <TouchableOpacity onPress={handleTermsPress} disabled={termsLoading}>
+                {termsLoading ? (
+                  <Text style={[styles.linkText, styles.loadingText]}>Loading...</Text>
+                ) : (
+                  <Text style={styles.linkText}>Terms of Use</Text>
+                )}
+              </TouchableOpacity>
+              {' '}    and {' '}
+              <TouchableOpacity onPress={handlePrivacyPress} disabled={termsLoading}>
+                {termsLoading ? (
+                  <Text style={[styles.linkText, styles.loadingText]}>Loading...</Text>
+                ) : (
+                  <Text style={styles.linkText}>Privacy Policy</Text>
+                )}
+              </TouchableOpacity>
+            </Text>
+          </View>
         </View>
 
         <TouchableOpacity

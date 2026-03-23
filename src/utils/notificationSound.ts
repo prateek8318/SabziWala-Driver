@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
-const ANDROID_RAW_FILENAME = 'order_notification.mp3'; // Android raw: lowercase + underscore only
+const ANDROID_RAW_FILENAME = 'order_notification'; // Android raw resource name without extension
 const IOS_BUNDLE_FILENAME = 'order_notification.mp3';
 
 /**
@@ -16,7 +16,8 @@ export function playNotificationSound(): void {
     Sound.setCategory('Playback', true);
 
     const filename = Platform.OS === 'android' ? ANDROID_RAW_FILENAME : IOS_BUNDLE_FILENAME;
-    const sound = new Sound(filename, Sound.MAIN_BUNDLE, (error: unknown) => {
+    const basePath = Platform.OS === 'android' ? Sound.MAIN_BUNDLE : Sound.MAIN_BUNDLE;
+    const sound = new Sound(filename, basePath, (error: unknown) => {
       if (error) {
         console.warn('Notification sound load failed, using fallback:', error);
         playFallbackFeedback();

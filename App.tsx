@@ -5,7 +5,7 @@
  * @format
  */
 
-import { StatusBar, StyleSheet, useColorScheme, View, BackHandler, Alert } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme, View, BackHandler, Modal, Text, TouchableOpacity, Animated } from 'react-native';
 import {
   SafeAreaProvider,
 } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import Toast from 'react-native-toast-message';
 import React, { useState, useEffect } from 'react';
 import { storage } from './src/services/storage';
 import { firebaseService } from './src/services/firebase';
+import { AppState, AppStateStatus } from 'react-native';
 
 type ScreenType =
   | 'dashboard'
@@ -68,6 +69,8 @@ function AppContent() {
   const [deliveryOrderId, setDeliveryOrderId] = useState<string>('');
   const [deliveryPhotoUri, setDeliveryPhotoUri] = useState<string>('');
   const [orderDetailsOrderId, setOrderDetailsOrderId] = useState<string>('');
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [modalAnimation] = useState(new Animated.Value(0));
 
   // Check if user is logged in on app start
   useEffect(() => {
@@ -76,6 +79,34 @@ function AppContent() {
     setTimeout(() => {
       firebaseService.initializeNotifications();
     }, 1000); // Delay to ensure Firebase is fully initialized
+  }, []);
+
+  // Handle app state changes (background/foreground)
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      console.log('App state changed to:', nextAppState);
+      
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // App is going to background - DON'T change driver status
+        console.log('App went to background - keeping driver status as is');
+      } else if (nextAppState === 'active') {
+        // App is coming to foreground - DON'T change driver status  
+        console.log('App came to foreground - keeping driver status as is');
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
+
+  // Handle app close (when app is being terminated)
+  useEffect(() => {
+    // React Native doesn't have a reliable app close event
+    // We'll handle this through the logout and app state changes
+    console.log('App close handler initialized');
   }, []);
 
   // Handle back button press
@@ -88,23 +119,8 @@ function AppContent() {
 
       // If on dashboard, show exit confirmation
       if (currentScreen === 'dashboard') {
-        Alert.alert(
-          'Exit App',
-          'Are you sure you want to exit?',
-          [
-            {
-              text: 'Cancel',
-              onPress: () => null,
-              style: 'cancel',
-            },
-            {
-              text: 'Exit',
-              onPress: () => BackHandler.exitApp(),
-              style: 'destructive',
-            },
-          ],
-          { cancelable: false }
-        );
+        setShowExitModal(true);
+        animateModalIn();
         return true; // Prevent default back behavior
       }
 
@@ -117,6 +133,36 @@ function AppContent() {
 
     return () => backHandler.remove();
   }, [isLoggedIn, currentScreen]);
+
+  // Modal animation functions
+  const animateModalIn = () => {
+    Animated.timing(modalAnimation, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const animateModalOut = (callback?: () => void) => {
+    Animated.timing(modalAnimation, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowExitModal(false);
+      callback?.();
+    });
+  };
+
+  const handleExitConfirm = () => {
+    animateModalOut(() => {
+      BackHandler.exitApp();
+    });
+  };
+
+  const handleExitCancel = () => {
+    animateModalOut();
+  };
 
   
   const checkLoginStatus = async () => {
@@ -133,9 +179,17 @@ function AppContent() {
     setIsLoggedIn(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLoggedIn(false);
     storage.removeToken();
+    
+    // Set driver status to inactive on logout
+    try {
+      await storage.saveDriverStatus('inactive');
+      console.log('Driver status set to inactive on logout');
+    } catch (error) {
+      console.error('Error setting driver status to inactive on logout:', error);
+    }
   };
 
   const handleSplashComplete = () => {
@@ -267,6 +321,61 @@ function AppContent() {
         <AuthNavigator onLoginSuccess={handleLoginSuccess} />
       )}
       <Toast />
+      
+      {/* Custom Exit Modal */}
+      <Modal
+        transparent={true}
+        visible={showExitModal}
+        animationType="none"
+        onRequestClose={handleExitCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            style={[
+              styles.modalContent,
+              {
+                opacity: modalAnimation,
+                transform: [
+                  {
+                    scale: modalAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    })
+                  }
+                ]
+              }
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Exit App</Text>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to exit?
+              </Text>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={handleExitCancel}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.exitButton]}
+                onPress={handleExitConfirm}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.buttonText, styles.exitButtonText]}>Exit</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -280,6 +389,78 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#fff',
+  },
+  // Custom Exit Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#086B48',
+    textAlign: 'center',
+  },
+  modalBody: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  exitButton: {
+    backgroundColor: '#086B48',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelButtonText: {
+    color: '#374151',
+  },
+  exitButtonText: {
+    color: '#ffffff',
   },
 });
 

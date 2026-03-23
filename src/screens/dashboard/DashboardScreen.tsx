@@ -7,19 +7,25 @@ import OrderNotification from '../../components/OrderNotification';
 import styles from './DashboardScreen.styles';
 import { ApiService, IMAGE_BASE_URL } from '../../services/api';
 import socketService from '../../services/socketService';
+import storage from '../../services/storage';
+import qrScannerService from '../../services/qrScannerService';
 import NotificationScreen from '../notifications/NotificationScreen';
 import Toast from 'react-native-toast-message';
+import { playNotificationSound } from '../../utils/notificationSound';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 interface DashboardScreenProps {
   onLogout: () => void;
   onNavigate: (screen: string) => void;
 }
 
+const ORDER_TIMEOUT_SECONDS = 45;
+
 const SwipeIcon = () => (
   <View style={styles.swipeIcon}>
     <View style={styles.swipeArrow} />
     <View style={styles.swipeArrow} />
-    <View style={styles.swipeArrow} /> 
+    <View style={styles.swipeArrow} />
   </View>
 );
 
@@ -48,6 +54,7 @@ const SwipeableOrderCard = ({
 }) => {
   const animatedValue = new Animated.Value(0);
   const [accepted, setAccepted] = useState(false);
+  const [swipeProgress, setSwipeProgress] = useState('Swipe To Accept');
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -59,7 +66,14 @@ const SwipeableOrderCard = ({
       }
     },
     onPanResponderRelease: (_, gs) => {
-      if (gs.dx > 100 && gs.vx > 0.5) {
+      // Simple and clear conditions
+      if (gs.dx > 120) {
+        // Success haptic feedback
+        ReactNativeHapticFeedback.trigger('notificationSuccess', {
+          enableVibrateFallback: true,
+          ignoreAndroidSystemSettings: false,
+        });
+
         Animated.timing(animatedValue, {
           toValue: 300,
           duration: 200,
@@ -69,12 +83,20 @@ const SwipeableOrderCard = ({
           onAccept(apiOrderId);
         });
       } else {
+        // Failure haptic feedback
+        ReactNativeHapticFeedback.trigger('impactMedium', {
+          enableVibrateFallback: true,
+          ignoreAndroidSystemSettings: false,
+        });
+
         Animated.spring(animatedValue, {
           toValue: 0,
           tension: 100,
           friction: 8,
           useNativeDriver: false,
-        }).start();
+        }).start(() => {
+          setSwipeProgress('Swipe To Accept');
+        });
       }
     },
     onPanResponderTerminate: () => {
@@ -83,7 +105,9 @@ const SwipeableOrderCard = ({
         tension: 100,
         friction: 8,
         useNativeDriver: false,
-      }).start();
+      }).start(() => {
+        setSwipeProgress('Swipe To Accept');
+      });
     },
   });
 
@@ -169,7 +193,7 @@ const SwipeableOrderCard = ({
           <Text style={[styles.timerText, { color: timerBorderColor }]}>{timerText}</Text>
         </View>
       </View>
-      <Text style={styles.timerWarningCenter}>Order will cancel after 30s.</Text>
+      <Text style={styles.timerWarningCenter}>Order will cancel after 45s.</Text>
 
       <View style={styles.swipeContainer} {...panResponder.panHandlers}>
         <LinearGradient
@@ -182,7 +206,9 @@ const SwipeableOrderCard = ({
             <Animated.View style={[styles.swipeLeftContent, { transform: [{ translateX }, { rotate: imageRotation }] }]}>
               <Image source={require('../../images/swipe.png')} style={styles.swipeImage} />
             </Animated.View>
-            <Animated.Text style={[styles.swipeButtonText, { opacity: textOpacity }]}>Swipe To Accept</Animated.Text>
+            <Animated.Text style={[styles.swipeButtonText, { opacity: textOpacity }]}>
+              {swipeProgress}
+            </Animated.Text>
           </View>
         </LinearGradient>
       </View>
@@ -194,7 +220,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('home');
   const [orderTab, setOrderTab] = useState('new');
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
   const [driverProfile, setDriverProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [homeData, setHomeData] = useState<any>(null);
@@ -206,11 +232,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [orderStatuses, setOrderStatuses] = useState<{ [key: string]: string }>({});
   const [orderTimers, setOrderTimers] = useState<Record<string, { remaining: number; total: number }>>({});
+  const [storedOrderTimers, setStoredOrderTimers] = useState<Record<string, { startedAt: number; total: number }>>({});
   const [showQRModal, setShowQRModal] = useState(false);
   const [imageLoadErrors, setImageLoadErrors] = useState<{ [key: string]: number }>({});
   const timerIntervalsRef = useRef<Record<string, any>>({});
   const autoRefreshIntervalRef = useRef<any>(null);
   const [previousNewOrdersCount, setPreviousNewOrdersCount] = useState(0);
+  const timeoutInProgressRef = useRef<Record<string, boolean>>({});
+  const notifiedOrderIdsRef = useRef<Record<string, boolean>>({});
 
   const safeNumber = (v: any, fallback = 0) => {
     const n = typeof v === 'number' ? v : Number(v);
@@ -224,12 +253,69 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     fetchDriverProfile();
     fetchHomeData();
     fetchOrders();
+
+    // Only set driver status to inactive on first app start, not on app resume
+    initializeDriverStatus();
   }, []);
 
-  // Sync isOnline state with driver profile status
+  // Initialize driver status to inactive (only on first app start)
+  const initializeDriverStatus = async () => {
+    try {
+      // Check if driver status is already saved in storage
+      const savedStatus = await storage.getDriverStatus();
+      console.log('Saved driver status:', savedStatus);
+
+      // If status is already saved, use it (don't force inactive)
+      if (savedStatus === 'active') {
+        setIsOnline(true);
+        console.log('Driver status restored to active from storage');
+      } else {
+        // Default to inactive for first time or if inactive is saved
+        setIsOnline(false);
+        console.log('Driver status set to inactive');
+      }
+    } catch (error) {
+      console.error('Error initializing driver status:', error);
+      // On error, default to inactive
+      setIsOnline(false);
+      await storage.saveDriverStatus('inactive');
+    }
+  };
+
+  // Update API status when driver profile is loaded and status differs
+  useEffect(() => {
+    if (driverProfile?._id) {
+      // Only update API if there's a mismatch between local and backend
+      const updateApiStatus = async () => {
+        try {
+          // Get current local status
+          const localStatus = await storage.getDriverStatus();
+          const backendStatus = driverProfile.status;
+
+          console.log('Local status:', localStatus, 'Backend status:', backendStatus);
+
+          // If they don't match, sync backend with local
+          if ((localStatus === 'active' && backendStatus !== 'active') ||
+            (localStatus === 'inactive' && backendStatus === 'active')) {
+
+            const shouldBeActive = localStatus === 'active';
+            await ApiService.toggleDriverStatus(driverProfile._id, shouldBeActive);
+            console.log('Synced backend status to local:', shouldBeActive);
+          }
+        } catch (error) {
+          console.error('Error syncing API status:', error);
+        }
+      };
+      updateApiStatus();
+    }
+  }, [driverProfile?._id, driverProfile?.status]);
+
+  // Sync isOnline state with driver profile status (but keep it false initially)
   useEffect(() => {
     if (driverProfile && driverProfile.status !== undefined) {
-      setIsOnline(driverProfile.status === 'active');
+      // Don't sync with driver profile status - keep it as is (false by default)
+      // setIsOnline(driverProfile.status === 'active');
+      console.log('Driver profile status:', driverProfile.status, 'but keeping isOnline as:', isOnline);
     }
   }, [driverProfile]);
 
@@ -238,7 +324,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     if (driverProfile?._id) {
       // Connect to socket when driver profile is available
       socketService.connect(driverProfile._id);
-      
+
       return () => {
         // Disconnect socket on unmount
         socketService.disconnect();
@@ -254,33 +340,43 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     };
   }, []);
 
-  // Auto-refresh effect
+  // Auto-refresh effect - Optimized for new orders only
   useEffect(() => {
-    // Set up auto-refresh interval (every 15 seconds)
+    // Set up auto-refresh interval for new orders only (every 30 seconds)
+    // Only refreshes new orders, not entire dashboard for better performance
     autoRefreshIntervalRef.current = setInterval(async () => {
       try {
-        // Refresh home data and orders
-        await Promise.all([
-          fetchHomeData(),
-          fetchOrders()
-        ]);
-        
-        // Check if new orders arrived
-        if (orderTab === 'new' && newOrders.length > previousNewOrdersCount) {
-          // Show toast for new orders
-          Toast.show({
-            type: 'success',
-            text1: 'New Order Available!',
-            text2: `${newOrders.length - previousNewOrdersCount} new order(s) received`,
-          });
+        // Only refresh new orders when driver is online and on new orders tab
+        if (orderTab === 'new' && isOnline) {
+          const response = await ApiService.getDriverOrders('new');
           
-          // Update previous count
-          setPreviousNewOrdersCount(newOrders.length);
+          if (response.data.success) {
+            const orders = response.data.orderList || [];
+            const filteredNewOrders = orders.filter(isNew);
+            
+            // Check if new orders arrived
+            if (filteredNewOrders.length > previousNewOrdersCount) {
+              setNewOrders(filteredNewOrders);
+              
+              // Show toast for new orders
+              Toast.show({
+                type: 'success',
+                text1: 'New Order Available!',
+                text2: `${filteredNewOrders.length - previousNewOrdersCount} new order(s) received`,
+              });
+
+              // Update previous count
+              setPreviousNewOrdersCount(filteredNewOrders.length);
+              
+              // Play notification sound for new orders
+              playNotificationSound();
+            }
+          }
         }
       } catch (error) {
         console.error('Auto-refresh error:', error);
       }
-    }, 15000); // Refresh every 15 seconds
+    }, 30000); // Refresh every 30 seconds (optimized from 15 seconds)
 
     // Cleanup interval on unmount
     return () => {
@@ -288,7 +384,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         clearInterval(autoRefreshIntervalRef.current);
       }
     };
-  }, [orderTab, previousNewOrdersCount, newOrders.length]);
+  }, [orderTab, previousNewOrdersCount, isOnline]);
 
   useEffect(() => {
     fetchOrders();
@@ -299,7 +395,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       // Clear all intervals on unmount
       Object.values(timerIntervalsRef.current).forEach((id) => clearInterval(id));
       timerIntervalsRef.current = {};
-      
+
       // Clear auto-refresh interval
       if (autoRefreshIntervalRef.current) {
         clearInterval(autoRefreshIntervalRef.current);
@@ -308,19 +404,80 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   }, []);
 
   useEffect(() => {
+    const loadStoredTimers = async () => {
+      const timers = await storage.getOrderTimers();
+      setStoredOrderTimers(timers);
+    };
+
+    loadStoredTimers();
+  }, []);
+
+  useEffect(() => {
+    if (orderTab !== 'new') return;
+
+    const currentOrderIds = newOrders
+      .map((order) => (order?._id || order?.orderId || '').toString())
+      .filter(Boolean);
+
+    if (currentOrderIds.length === 0) {
+      notifiedOrderIdsRef.current = {};
+      return;
+    }
+
+    const unseenOrderIds = currentOrderIds.filter((orderId) => !notifiedOrderIdsRef.current[orderId]);
+
+    if (unseenOrderIds.length > 0) {
+      playNotificationSound();
+      unseenOrderIds.forEach((orderId) => {
+        notifiedOrderIdsRef.current[orderId] = true;
+      });
+    }
+
+    const activeOrderIds = new Set(currentOrderIds);
+    Object.keys(notifiedOrderIdsRef.current).forEach((orderId) => {
+      if (!activeOrderIds.has(orderId)) {
+        delete notifiedOrderIdsRef.current[orderId];
+      }
+    });
+  }, [newOrders, orderTab]);
+
+  useEffect(() => {
     if (orderTab === 'new' && newOrders.length > 0) {
       startTimersForNewOrders(newOrders);
     }
-    
+
     // Cleanup timers when switching away from new tab or when orders change
     return () => {
       if (orderTab !== 'new') {
         Object.keys(timerIntervalsRef.current).forEach(orderId => {
-          clearOrderTimer(orderId);
+          clearOrderTimer(orderId, false);
         });
       }
     };
   }, [newOrders, orderTab]);
+
+  useEffect(() => {
+    if (orderTab !== 'new') return;
+
+    const syncStoredTimers = async () => {
+      const activeOrderIds = newOrders
+        .map((order) => (order?._id || order?.orderId || '').toString())
+        .filter(Boolean);
+
+      if (ordersLoading) return;
+
+      if (activeOrderIds.length === 0) {
+        setStoredOrderTimers({});
+        return;
+      }
+
+      await storage.retainOrderTimers(activeOrderIds);
+      const timers = await storage.getOrderTimers();
+      setStoredOrderTimers(timers);
+    };
+
+    syncStoredTimers();
+  }, [newOrders, orderTab, ordersLoading]);
 
   const normalizeOrderStatus = (order: any): string => {
     const s = (order?.orderStatus || order?.status || order?.state || '').toString().toLowerCase();
@@ -341,8 +498,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
 
   const isNew = (order: any) => {
     const s = normalizeOrderStatus(order);
-    // "shipped" means available for other drivers after timeout (per requirement)
-    return !isOngoing(order) && s !== 'delivered' && s !== 'cancelled';
+    // New orders are 'shipped' orders that haven't been accepted yet
+    // According to API docs: new orders have status "shipped" (assigned but not yet accepted)
+    return s === 'shipped';
   };
 
   const getTimerColor = (remaining: number, total: number) => {
@@ -354,15 +512,26 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   };
 
   const openInMaps = (address?: string) => {
-    if (!address) {
-      Alert.alert('Location not available');
+    console.log('=== openInMaps DEBUG ===');
+    console.log('Address received:', address);
+
+    if (!address || address.trim() === '' || address === 'Delivery address not available' || address === 'Pickup address not available') {
+      console.log('Invalid address detected, showing alert');
+      Alert.alert('Location not available', 'The address for this location is not available. Please check the order details.');
       return;
     }
 
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    console.log('Maps URL:', url);
 
     Linking.openURL(url).catch(() => {
-      Alert.alert('Error', 'Unable to open Google Maps');
+      console.log('Failed to open Google Maps, trying alternative');
+      // Try alternative URL format
+      const alternativeUrl = `https://maps.google.com/?q=${encodeURIComponent(address)}`;
+      Linking.openURL(alternativeUrl).catch(() => {
+        console.log('Both map URLs failed');
+        Alert.alert('Error', 'Unable to open Google Maps. Please make sure you have a maps app installed.');
+      });
     });
   };
 
@@ -420,22 +589,38 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   const fetchOrders = async () => {
     try {
       setOrdersLoading(true);
-            
+
       const orderType = orderTab === 'new' ? 'new' : 'ongoing';
       console.log('=== DASHBOARD SCREEN ===');
       console.log(`Fetching orders with type: ${orderType}`);
       const response = await ApiService.getDriverOrders(orderType);
+
+      console.log('API Response:', response.data);
       
       if (response.data.success) {
         const orders = response.data.orderList || [];
+        console.log('Raw orders from API:', orders);
+        console.log('Order status check - first 3 orders:');
+        orders.slice(0, 3).forEach((order: any, index: number) => {
+          console.log(`Order ${index + 1}:`, {
+            id: order._id || order.orderId,
+            status: order.status || order.orderStatus,
+            normalizedStatus: normalizeOrderStatus(order),
+            isNew: isNew(order),
+            isOngoing: isOngoing(order)
+          });
+        });
+        
         const filtered =
           orderType === 'new' ? orders.filter(isNew) : orders.filter(isOngoing);
-                
+        
+        console.log(`Filtered ${orderType} orders:`, filtered);
+
         if (orderTab === 'new') {
           // Check for new orders before updating
           const currentCount = newOrders.length;
           setNewOrders(filtered);
-          
+
           // Update previous count if this is the first load or if orders changed
           if (currentCount === 0 || filtered.length !== currentCount) {
             setPreviousNewOrdersCount(filtered.length);
@@ -465,19 +650,32 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     }
   };
 
-  const clearOrderTimer = (apiOrderId: string) => {
+  const clearOrderTimer = (apiOrderId: string, removeStoredTimer = true) => {
     const id = timerIntervalsRef.current[apiOrderId];
     if (id) clearInterval(id);
     delete timerIntervalsRef.current[apiOrderId];
+    delete timeoutInProgressRef.current[apiOrderId];
     setOrderTimers((prev) => {
       const next = { ...prev };
       delete next[apiOrderId];
       return next;
     });
+    setStoredOrderTimers((prev) => {
+      if (!prev[apiOrderId]) return prev;
+      const next = { ...prev };
+      delete next[apiOrderId];
+      return next;
+    });
+    if (removeStoredTimer) {
+      storage.removeOrderTimer(apiOrderId).catch(() => { });
+    }
   };
 
   const handleOrderTimeout = async (apiOrderId: string) => {
     // Auto timeout & reassign flow (client-driven trigger)
+    if (timeoutInProgressRef.current[apiOrderId]) return;
+    timeoutInProgressRef.current[apiOrderId] = true;
+
     try {
       clearOrderTimer(apiOrderId);
       setNewOrders((prev) => prev.filter((o) => (o._id || o.orderId) !== apiOrderId));
@@ -490,7 +688,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         message: 'Order reassigned due to timeout',
         type: 'order_timeout',
         orderId: apiOrderId,
-      }).catch(() => {});
+      }).catch(() => { });
 
       Toast.show({
         type: 'info',
@@ -502,6 +700,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     } catch (e: any) {
       // Even if backend doesn't support shipped, keep UI consistent
       fetchOrders();
+    } finally {
+      delete timeoutInProgressRef.current[apiOrderId];
     }
   };
 
@@ -513,17 +713,38 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         if (!apiOrderId) return;
         if (timerIntervalsRef.current[apiOrderId]) return;
 
-        // Use local 30-second timer without API call
-        const total = 30;
-        setOrderTimers((prev) => ({ ...prev, [apiOrderId]: { remaining: total, total } }));
+        const total = ORDER_TIMEOUT_SECONDS;
+        const savedTimer = await storage.getOrderTimer(apiOrderId);
+        const now = Date.now();
+        const startedAt = savedTimer?.startedAt ?? now;
+        const remaining = Math.max(
+          0,
+          total - Math.floor((now - startedAt) / 1000)
+        );
 
-        ApiService.createDriverNotification({
-          title: 'New Order Assigned',
-          message: `New Order Assigned (${total}s timeout)`,
-          type: 'order_assigned',
-          orderId: apiOrderId,
-          meta: { hasActiveTimer: true, timeoutSeconds: total },
-        }).catch(() => {});
+        if (!savedTimer) {
+          await storage.saveOrderTimer(apiOrderId, { startedAt, total });
+          setStoredOrderTimers((prev) => ({ ...prev, [apiOrderId]: { startedAt, total } }));
+
+          ApiService.createDriverNotification({
+            title: 'New Order Assigned',
+            message: `New Order Assigned (${total}s timeout)`,
+            type: 'order_assigned',
+            orderId: apiOrderId,
+            meta: { hasActiveTimer: true, timeoutSeconds: total },
+          }).catch(() => { });
+        }
+
+        if (remaining <= 0) {
+          setTimeout(() => handleOrderTimeout(apiOrderId), 0);
+          return;
+        }
+
+        if (savedTimer) {
+          setStoredOrderTimers((prev) => ({ ...prev, [apiOrderId]: { startedAt, total } }));
+        }
+
+        setOrderTimers((prev) => ({ ...prev, [apiOrderId]: { remaining, total } }));
 
         timerIntervalsRef.current[apiOrderId] = setInterval(() => {
           setOrderTimers((prev) => {
@@ -545,7 +766,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   const handleStatusToggle = async (newValue: boolean) => {
     try {
       setIsOnline(newValue);
-      
+
       if (!driverProfile?._id) {
         console.error('Driver ID not found');
         return;
@@ -553,16 +774,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
 
       const status = newValue ? 'active' : 'inactive';
       console.log('Toggling driver status to:', status);
-      
+
+      // Save status to storage first
+      await storage.saveDriverStatus(status);
+
       const response = await ApiService.toggleDriverStatus(driverProfile._id, newValue);
-      
+
       if (response.data.success) {
         console.log('Status updated successfully:', response.data.message);
         setDriverProfile((prev: any) => ({
           ...prev,
           status: newValue ? 'active' : 'inactive'
         }));
-        
+
         // Show success toast notification
         Toast.show({
           type: 'success',
@@ -571,8 +795,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         });
       } else {
         console.error('Failed to update status:', response.data.message);
+        // Revert both UI and storage on failure
         setIsOnline(!newValue);
-        
+        await storage.saveDriverStatus(newValue ? 'inactive' : 'active');
+
         // Show error toast notification
         Toast.show({
           type: 'error',
@@ -582,8 +808,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       }
     } catch (error) {
       console.error('Error toggling driver status:', error);
+      // Revert both UI and storage on error
       setIsOnline(!newValue);
-      
+      await storage.saveDriverStatus(newValue ? 'inactive' : 'active');
+
       // Show error toast notification
       Toast.show({
         type: 'error',
@@ -596,6 +824,26 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
     if (tab !== 'home') onNavigate(tab);
+  };
+
+  const getDisplayTimer = (order: any) => {
+    const orderId = (order?._id || order?.orderId || '').toString();
+    const liveTimer = orderTimers[orderId];
+    if (liveTimer) return liveTimer;
+
+    const storedTimer = storedOrderTimers[orderId];
+    if (storedTimer) {
+      const remaining = Math.max(
+        0,
+        storedTimer.total - Math.floor((Date.now() - storedTimer.startedAt) / 1000)
+      );
+      return { remaining, total: storedTimer.total };
+    }
+
+    const createdAtMs = new Date(order?.createdAt || Date.now()).getTime();
+    const total = ORDER_TIMEOUT_SECONDS;
+    const remaining = Math.max(0, total - Math.floor((Date.now() - createdAtMs) / 1000));
+    return { remaining, total };
   };
 
   const formatTime = (dateString?: string) => {
@@ -632,19 +880,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     if (order.pickup?.address) {
       return order.pickup.address;
     }
-    
+
     // If API returns structured pickup data
     if (order.pickup?.name && order.pickup?.address) {
       return `${order.pickup.name}: ${order.pickup.address}`;
     }
-    
+
     // Fallback to store/warehouse info if available
     if (order.store?.name || order.warehouse?.name) {
       const storeName = order.store?.name || order.warehouse?.name || 'Store';
       const storeAddress = order.store?.address || order.warehouse?.address || 'Store Address';
       return `${storeName}: ${storeAddress}`;
     }
-    
+
     return 'Pickup address not available';
   };
 
@@ -656,7 +904,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     console.log('shippingAddress:', JSON.stringify(order.shippingAddress, null, 2));
     console.log('delivery:', JSON.stringify(order.delivery, null, 2));
     console.log('===============================');
-    
+
     // Priority 1: Try shippingAddress (from Order Details API)
     const shippingAddress = order.shippingAddress || {};
     if (shippingAddress.houseNoOrFlatNo || shippingAddress.landmark || shippingAddress.city) {
@@ -676,12 +924,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       if (shippingAddress.pincode) {
         addressParts.push(shippingAddress.pincode);
       }
-      
+
       const result = addressParts.join(', ');
       console.log('Final address from shippingAddress:', result);
       return result;
     }
-    
+
     // Priority 2: Try delivery object (from Dashboard Orders API)
     const delivery = order.delivery || {};
     if (delivery.address1 || delivery.address2 || delivery.city) {
@@ -698,18 +946,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       if (delivery.pincode) {
         addressParts.push(delivery.pincode);
       }
-      
+
       const result = addressParts.join(', ');
       console.log('Final address from delivery object:', result);
       return result;
     }
-    
+
     // Priority 3: Fallback to delivery.address if it exists
     if (delivery.address) {
       console.log('Fallback to delivery.address:', delivery.address);
       return delivery.address;
     }
-    
+
     // Final fallback
     console.log('No address found, returning fallback');
     return 'Delivery address not available';
@@ -724,25 +972,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     if (!selectedOrder) return;
 
     try {
-      let apiStatus: 'accepted' | 'cancelled' | 'delivered';
-      
-      // Map UI status to API status
-      if (status === 'Pickup Confirmed') {
-        apiStatus = 'accepted';
-      } else if (status === 'Delivered') {
-        apiStatus = 'delivered';
-      } else if (status === 'Payment') {
-        // Payment status - for COD, this means ready for payment collection
-        // We'll still use 'accepted' status but track UI state separately
-        apiStatus = 'accepted';
-      } else {
-        // "On the way" - still accepted status
-        apiStatus = 'accepted';
-      }
-
       const apiOrderId = (selectedOrder._id || selectedOrder.orderId || selectedOrder.bookingId || '').toString();
+      console.log('=== STATUS UPDATE DEBUG ===');
+      console.log('Selected order:', selectedOrder);
+      console.log('Extracted API Order ID:', apiOrderId);
+      console.log('Status to update:', status);
+      
+      if (!apiOrderId) throw new Error('Order ID not found');
 
-      // Delivered flow: open add-photo screen -> then delivered -> delivery completed
       if (status === 'Delivered') {
         setShowStatusModal(false);
         setSelectedOrder(null);
@@ -750,63 +987,124 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         return;
       }
 
-      const response = await ApiService.updateOrderStatus(apiOrderId, apiStatus);
-      
-      if (response.data.status || response.status === 200) {
-        // Auto-trigger: create notification when delivered
-        if (status === 'Delivered') {
-          const orderId = selectedOrder.orderId || selectedOrder.bookingId || selectedOrder._id || '';
-          const earning =
-            safeNumber(selectedOrder.driverEarning) ||
-            safeNumber(selectedOrder.earning) ||
-            safeNumber(selectedOrder.deliveryCharge) ||
-            safeNumber(selectedOrder.driverIncome) ||
-            0;
-
-          ApiService.createDriverNotification({
-            title: 'Order Delivered',
-            message: earning > 0
-              ? `Order #${orderId} delivered. Earnings: ₹${earning}`
-              : `Order #${orderId} delivered successfully.`,
-            type: 'order_delivered',
-            orderId: orderId ? orderId.toString() : undefined,
-            amount: earning > 0 ? earning : undefined,
-          }).catch(() => {});
-        }
-
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: response.data.message || 'Status updated successfully',
-        });
-
-        // Update local status
-        const orderId = apiOrderId;
-        setOrderStatuses(prev => ({
-          ...prev,
-          [orderId]: status
-        }));
-
-        // If status is Delivered and payment is COD, refresh to show payment scanner
-        if (status === 'Delivered' && selectedOrder.paymentMode === 'cod') {
-          // Update the order status in the list
-          setOngoingOrders(prev => prev.map(order => 
-            order._id === orderId || order.orderId === orderId
-              ? { ...order, orderStatus: 'delivered', status: 'delivered' }
-              : order
-          ));
-        }
-
-        // Refresh orders
-        fetchOrders();
+      // COD payment: modal me "Payment" dabane par payment scanner modal open hona chahiye.
+      if (status === 'Payment') {
         setShowStatusModal(false);
-        setSelectedOrder(null);
+        setShowQRModal(true);
+        return;
       }
+
+      const isApiSuccess = (resp: any) => {
+        const hasStatus = Boolean(resp?.data?.status);
+        const hasSuccess = Boolean(resp?.data?.success);
+        const hasStatusCode = resp?.status === 200;
+        
+        console.log('=== API SUCCESS VALIDATION ===');
+        console.log('Response data:', resp?.data);
+        console.log('Response status:', resp?.status);
+        console.log('Has data.status:', hasStatus);
+        console.log('Has data.success:', hasSuccess);
+        console.log('Has status 200:', hasStatusCode);
+        console.log('Final result:', hasStatus || hasSuccess || hasStatusCode);
+        
+        return hasStatus || hasSuccess || hasStatusCode;
+      };
+
+      let response: any = null;
+      if (status === 'On the way') {
+        // Check if order has correct status for "On the way" action
+        const currentOrderStatus = normalizeOrderStatus(selectedOrder);
+        console.log('Current order status:', currentOrderStatus);
+        
+        if (currentOrderStatus !== 'processing' && currentOrderStatus !== 'accepted') {
+          Toast.show({
+            type: 'error',
+            text1: 'Invalid Status',
+            text2: `Order must be accepted first. Current status: ${currentOrderStatus}`,
+          });
+          return;
+        }
+        
+        console.log('Calling updateOrderStatus with shipped status for order ID:', apiOrderId);
+        try {
+          response = await ApiService.updateOrderStatus(apiOrderId, 'shipped');
+          console.log('updateOrderStatus response:', response);
+        } catch (error: any) {
+          console.log('updateOrderStatus error:', error);
+          console.log('Error response:', error.response);
+          console.log('Error response data:', error.response?.data);
+          throw error;
+        }
+      } else if (status === 'Pickup Confirmed') {
+        // Location endpoint ke liye latitude/longitude chahiye.
+        // Dashboard orders me pickup.lat/long available ho sakta hai; warna safe fallback use karte hain.
+        const latRaw =
+          selectedOrder?.pickup?.lat ??
+          selectedOrder?.pickup?.latitude ??
+          selectedOrder?.pickupLat ??
+          selectedOrder?.lat;
+        const lngRaw =
+          selectedOrder?.pickup?.long ??
+          selectedOrder?.pickup?.lng ??
+          selectedOrder?.pickup?.longitude ??
+          selectedOrder?.pickupLong ??
+          selectedOrder?.lng;
+
+        let latitude = typeof latRaw === 'number' ? latRaw : Number(latRaw);
+        let longitude = typeof lngRaw === 'number' ? lngRaw : Number(lngRaw);
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          latitude = 28.6139;
+          longitude = 77.2090;
+          Toast.show({
+            type: 'info',
+            text1: 'Location fallback',
+            text2: 'Default pickup coordinates used (update with GPS later)',
+          });
+        }
+
+        response = await ApiService.updateOrderLocationAndStatus(apiOrderId, latitude, longitude, 'picked_up');
+      } else {
+        // Fallback: backend accepted status
+        response = await ApiService.updateOrderStatus(apiOrderId, 'accepted');
+      }
+
+      if (!isApiSuccess(response)) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: response?.data?.message || 'Failed to update status',
+        });
+        return;
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: response?.data?.message || 'Status updated successfully',
+      });
+
+      // Update local status
+      setOrderStatuses(prev => ({
+        ...prev,
+        [apiOrderId]: status
+      }));
+
+      // Refresh orders
+      fetchOrders();
+      setShowStatusModal(false);
+      setSelectedOrder(null);
     } catch (error: any) {
+      console.log('=== STATUS UPDATE ERROR ===');
+      console.log('Error details:', error);
+      console.log('Error response:', error.response);
+      console.log('Error response data:', error.response?.data);
+      console.log('Error message:', error.message);
+      
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error.response?.data?.message || 'Failed to update status',
+        text2: error.response?.data?.message || error.message || 'Failed to update status',
       });
     }
   };
@@ -823,7 +1121,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
           message: `Order #${orderId} accepted successfully.`,
           type: 'order_accepted',
           orderId,
-        }).catch(() => {});
+        }).catch(() => { });
 
         Toast.show({
           type: 'success',
@@ -858,7 +1156,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
           message: `Order #${orderId} cancelled successfully.`,
           type: 'order_cancelled',
           orderId,
-        }).catch(() => {});
+        }).catch(() => { });
 
         Toast.show({
           type: 'success',
@@ -880,14 +1178,51 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     onNavigate(`productDetails:${order._id || order.orderId}`);
   };
 
-  const handlePaymentScanner = (order: any) => {
+  const handlePaymentScanner = async (order: any) => {
     setSelectedOrder(order);
     setShowQRModal(true);
   };
 
+  const handleOpenQRScanner = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      // Start the payment flow
+      const result = await qrScannerService.completePaymentFlow(selectedOrder);
+
+      Alert.alert(
+        'Payment Successful',
+        `Payment of ₹${selectedOrder.totalAmount} recorded successfully!`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowQRModal(false);
+              setSelectedOrder(null);
+              // Refresh orders to show updated status
+              fetchOrders();
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert(
+        'Payment Failed',
+        error.message || 'Failed to process payment',
+        [{ text: 'OK', style: 'cancel' }]
+      );
+    }
+  };
+
   const isCODPayment = (order: any) => {
-    const mode = order?.paymentMode?.toLowerCase();
-    return mode === 'cod' || mode === 'cash on delivery';
+    const rawMode = order?.paymentMode ?? order?.payment_type ?? order?.paymentMethod ?? order?.payment;
+    const modeLower = (rawMode ?? '').toString().toLowerCase().trim();
+    return (
+      modeLower === 'cod' ||
+      modeLower === 'cash on delivery' ||
+      modeLower === 'cash_on_delivery' ||
+      (modeLower.includes('cash') && modeLower.includes('delivery'))
+    );
   };
 
   const isOnlinePayment = (order: any) => {
@@ -931,17 +1266,17 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                   const cleanPath = imagePath.startsWith('public/') ? imagePath.substring(6) : imagePath;
                   // Ensure no leading slash to avoid double slashes
                   const normalizedPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
-                  
+
                   // Try different URL patterns
                   const imageUrl = `${IMAGE_BASE_URL}${normalizedPath}`;
                   const fallbackUrl = `${IMAGE_BASE_URL}${imagePath}`;
                   const alternativeUrl1 = `${IMAGE_BASE_URL.replace('/public/', '/')}${normalizedPath}`;
                   const alternativeUrl2 = `${IMAGE_BASE_URL}driver/${driverProfile.image.split('\\').pop()}`;
-                  
+
                   const errorCount = imageLoadErrors[driverProfile.image] || 0;
                   const urls = [imageUrl, fallbackUrl, alternativeUrl1, alternativeUrl2];
                   const currentUrl = urls[Math.min(errorCount, urls.length - 1)];
-                  
+
                   console.log('=== PROFILE IMAGE DEBUG ===');
                   console.log('Original Image Path:', driverProfile.image);
                   console.log('Converted Image Path:', imagePath);
@@ -952,15 +1287,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                   console.log('Current URL:', currentUrl);
                   console.log('All URLs:', urls);
                   console.log('==========================');
-                  
+
                   return (
-                    <Image 
-                      source={{ uri: currentUrl }} 
-                      style={styles.profileImage} 
+                    <Image
+                      source={{ uri: currentUrl }}
+                      style={styles.profileImage}
                       onError={(e) => {
                         console.log('Image load error:', e.nativeEvent.error);
                         console.log('Failed URL:', currentUrl);
-                        
+
                         if (errorCount < urls.length - 1) {
                           // Try next URL
                           setImageLoadErrors(prev => ({
@@ -1068,8 +1403,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       </View>
 
       <SafeAreaView style={[styles.contentContainer, { paddingBottom: insets.bottom }]}>
-        <ScrollView 
-          style={styles.content} 
+        <ScrollView
+          style={styles.content}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           nestedScrollEnabled={true}
@@ -1092,8 +1427,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                       drop={formatDeliveryAddress(order)}
                       customer={order.delivery?.name || order.userId?.name || 'Customer'}
                       value={`₹${order.totalAmount || 0}`}
-                      timerText={`${Math.max(0, (orderTimers[(order._id || order.orderId || '')]?.remaining ?? 30))}s`}
-                      timerBorderColor={getTimerColor((orderTimers[(order._id || order.orderId || '')]?.remaining ?? 30), 30)}
+                      timerText={`${Math.max(0, getDisplayTimer(order).remaining)}s`}
+                      timerBorderColor={getTimerColor(getDisplayTimer(order).remaining, getDisplayTimer(order).total)}
                       onAccept={acceptOrder}
                     />
                   ))
@@ -1133,7 +1468,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                         </View>
                         <View style={styles.locationRight}>
                           <TouchableOpacity
-                            onPress={() => openInMaps(order.pickup?.address)}
+                            onPress={() => openInMaps(formatPickupAddress(order))}
                           >
                             <Image
                               source={require('../../images/location.png')}
@@ -1170,7 +1505,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                         <View style={styles.locationCenter} />
                         <View style={styles.locationRight}>
                           <TouchableOpacity
-                            onPress={() => openInMaps(order.delivery?.address)}
+                            onPress={() => openInMaps(formatDeliveryAddress(order))}
                           >
                             <Image
                               source={require('../../images/location.png')}
@@ -1203,11 +1538,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                       {/* PAYMENT MODE */}
                       <View style={styles.orderValueSection}>
                         <Text style={styles.orderValueLabel}>Payment Mode</Text>
-                        <Text style={styles.orderValueAmount}>{getPaymentModeText(order.paymentMode)}</Text>
+                        <Text style={styles.orderValueAmount}>{getPaymentModeText(order.paymentMode ?? order.payment_type)}</Text>
                       </View>
 
                       {/* PRODUCT DETAILS LINK */}
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.reportLink}
                         onPress={() => handleProductDetails(order)}
                       >
@@ -1215,7 +1550,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                       </TouchableOpacity>
 
                       {/* PRIMARY ACTION BUTTON */}
-                      {order.paymentMode === 'cod' && getCurrentStatus(order) === 'Delivered' ? (
+                      {isCODPayment(order) && getCurrentStatus(order) === 'Delivered' ? (
                         <TouchableOpacity
                           style={styles.updateButtonFull}
                           onPress={() => handlePaymentScanner(order)}
@@ -1232,7 +1567,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                       )}
 
                       {/* REPORT ISSUE LINK */}
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.reportLink}
                         onPress={() => onNavigate('reportIssue')}
                       >
@@ -1298,7 +1633,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                 On the way
               </Text>
             </TouchableOpacity>
-            {selectedOrder?.paymentMode === 'cod' && (
+            {isCODPayment(selectedOrder) && (
               <TouchableOpacity
                 style={[
                   styles.statusOption,
@@ -1336,6 +1671,53 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
               }}
             >
               <Text style={styles.statusModalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Scanner QR Modal */}
+      <Modal
+        visible={showQRModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowQRModal(false);
+          setSelectedOrder(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.qrModalContent}>
+            <Text style={styles.qrModalTitle}>Payment Scanner</Text>
+
+            {selectedOrder && (
+              <View style={styles.qrOrderInfo}>
+                <Text style={styles.qrOrderText}>Order ID: {selectedOrder._id || selectedOrder.orderId}</Text>
+                <Text style={styles.qrAmountText}>₹{selectedOrder.totalAmount || 0}</Text>
+                <Text style={styles.qrOrderText}>Customer: {selectedOrder.delivery?.name || 'N/A'}</Text>
+              </View>
+            )}
+
+            <View style={styles.qrCodeContainer}>
+              <Text style={styles.qrCodePlaceholder}>QR Code Scanner</Text>
+              <Text style={[styles.qrCodePlaceholder, { fontSize: 12 }]}>Scan customer's payment QR code</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.qrCloseButton}
+              onPress={handleOpenQRScanner}
+            >
+              <Text style={styles.qrCloseButtonText}>Open Scanner</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.qrCloseButton, { backgroundColor: '#666', marginTop: 10 }]}
+              onPress={() => {
+                setShowQRModal(false);
+                setSelectedOrder(null);
+              }}
+            >
+              <Text style={styles.qrCloseButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

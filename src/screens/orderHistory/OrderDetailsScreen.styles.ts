@@ -18,6 +18,11 @@ const scaleFont = (fontSize: number) => {
   return Math.max(fontSize * 0.8, Math.min(scaled, fontSize * 1.2));
 };
 
+const scaleVertical = (size: number) => {
+  const baseHeight = 812; // iPhone X base height
+  return Math.round((size * height) / baseHeight);
+};
+
 export default StyleSheet.create({
   container: {
     flex: 1,
@@ -52,9 +57,10 @@ export default StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontFamily: 'Poppins-SemiBold',
     color: '#111',
+    flexWrap: 'wrap',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -104,14 +110,17 @@ export default StyleSheet.create({
   },
   productDetailsLink: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: scaleVertical(12),
+    paddingHorizontal: scaleSize(10),
   },
   productDetailsText: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontFamily: 'Poppins-SemiBold',
     fontWeight: '700',
     color: '#000',
     textDecorationLine: 'underline',
+    textAlign: 'center',
+    flexWrap: 'wrap',
   },
   statusBadge: {
     backgroundColor: '#E5E7EB',
@@ -156,7 +165,7 @@ orderHeader: {
     flex: 1,
     flexWrap: 'wrap',
     marginRight: scaleSize(10),
-    maxWidth: width * 0.5,
+    maxWidth: width * 0.6,
   },
   orderDistance: {
     fontSize: scaleFont(16),
@@ -256,8 +265,9 @@ orderHeader: {
   addressText: {
     fontSize: scaleFont(12),
     color: '#333',
-    marginBottom: scaleSize(2),
+    marginBottom: scaleVertical(2),
     flex: 1,
+    flexWrap: 'wrap',
   },
   addressTimeHeading: {
     fontSize: scaleFont(13),
@@ -495,8 +505,7 @@ metaText: {
   color: '#000',
   alignContent:'center',
   textAlign:'center',
-
-  
+  flexWrap: 'wrap',
 },
 
 metaValue: {

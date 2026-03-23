@@ -46,7 +46,7 @@ class SocketService {
     connect(driverId: string) {
         this.driverId = driverId;
         
-        this.socket = io('http://192.168.1.9:7006', {
+        this.socket = io('http://159.89.146.245:5010', {
             transports: ['websocket'], // Try websocket first
             timeout: 10000 // 10 seconds timeout
         });

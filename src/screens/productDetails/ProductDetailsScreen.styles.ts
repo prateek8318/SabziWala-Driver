@@ -1,4 +1,23 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+// Responsive scaling functions
+const scaleSize = (size: number) => {
+  const baseWidth = 375; // iPhone X base width
+  return Math.round((size * width) / baseWidth);
+};
+
+const scaleFont = (fontSize: number) => {
+  const baseWidth = 375;
+  const scaled = Math.round((fontSize * width) / baseWidth);
+  return Math.max(fontSize * 0.8, Math.min(scaled, fontSize * 1.2));
+};
+
+const scaleVertical = (size: number) => {
+  const baseHeight = 812; // iPhone X base height
+  return Math.round((size * height) / baseHeight);
+};
 
 export default StyleSheet.create({
   container: {
@@ -7,128 +26,136 @@ export default StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: scaleSize(20),
+    paddingTop: scaleVertical(20),
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: scaleVertical(24),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: scaleVertical(40),
   }, 
   loadingText: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     color: '#666',
-    marginTop: 10,
+    marginTop: scaleVertical(10),
   },
   mainCard: {
     backgroundColor: '#E0FFF4',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
+    borderRadius: scaleSize(10),
+    padding: scaleSize(15),
+    marginBottom: scaleVertical(20),
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: scaleVertical(15),
+    paddingHorizontal: scaleSize(5), // Add padding to prevent overflow
   },
   statusChip: {
     backgroundColor: '#22C55E',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: scaleSize(12),
+    paddingVertical: scaleVertical(6),
+    borderRadius: scaleSize(12),
     alignSelf: 'flex-start',
-    minWidth: 80,
+    width: scaleSize(80), // Fixed width to prevent being pushed out
     alignItems: 'center',
   },
   statusChipText: {
-    fontSize: 13,
+    fontSize: scaleFont(13),
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
   },
   orderNumber: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '800',
     color: '#333',
+    maxWidth: scaleSize(180), // Increased to show more characters
+    marginRight: scaleSize(10),
   },
   orderDate: {
-    fontSize: 14,
+    fontSize: scaleFont(14),
     color: '#000',
     fontWeight: '600',
   },
   addressSection: {
-    marginBottom: 10,
+    marginBottom: scaleVertical(10),
   },
   addressRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: scaleVertical(8),
   },
   addressLabel: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontWeight: '700',
     color: '#000',
-    marginRight: 8,
-    minWidth: 80,
+    marginRight: scaleSize(8),
+    minWidth: scaleSize(80),
   },
   addressText: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontWeight: '500',
     color: '#000',
     flex: 1,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: 20,
-    marginTop: 4,
+    gap: scaleSize(20),
+    marginTop: scaleVertical(4),
   },
   metaText: {
-    fontSize: 12,
+    fontSize: scaleFont(12),
     color: '#666',
   },
   divider: {
     height: 1,
     backgroundColor: '#E0E0E0',
-    marginVertical: 12,
+    marginVertical: scaleVertical(12),
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: scaleVertical(10),
   },
   infoLabel: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontWeight: '600',
     color: '#333',
+    flex: 1,
+    flexWrap: 'wrap',
+    marginRight: scaleSize(10),
   },
   infoValue: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontWeight: '600',
     color: '#333',
+    flex: 1,
+    textAlign: 'right',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '700',
     color: '#000',
-    marginBottom: 15,
+    marginBottom: scaleVertical(15),
   },
   productItem: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: scaleSize(8),
+    padding: scaleSize(12),
+    marginBottom: scaleVertical(12),
   },
   productImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
+    width: scaleSize(80),
+    height: scaleSize(80),
+    borderRadius: scaleSize(8),
+    marginRight: scaleSize(12),
     resizeMode: 'cover',
   },
   productInfo: {
@@ -136,38 +163,38 @@ export default StyleSheet.create({
     justifyContent: 'center',
   },
   productName: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontWeight: '600',
     color: '#000',
-    marginBottom: 4,
+    marginBottom: scaleVertical(4),
   },
   productDescription: {
-    fontSize: 12,
+    fontSize: scaleFont(12),
     color: '#666',
-    marginBottom: 4,
+    marginBottom: scaleVertical(4),
   },
   productQuantity: {
-    fontSize: 14,
+    fontSize: scaleFont(14),
     color: '#666',
-    marginBottom: 8,
+    marginBottom: scaleVertical(8),
   },
   productPriceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scaleSize(8),
     flexWrap: 'wrap',
   },
   productUnitPrice: {
-    fontSize: 12,
+    fontSize: scaleFont(12),
     color: '#999',
   },
   productPrice: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontWeight: '700',
     color: '#086B48',
   },
   productOriginalPrice: {
-    fontSize: 14,
+    fontSize: scaleFont(14),
     color: '#999',
     textDecorationLine: 'line-through',
   },
@@ -175,39 +202,49 @@ export default StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: scaleVertical(10),
   },
   billLabel: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     color: '#333',
+    flex: 1,
+    flexWrap: 'wrap',
+    marginRight: scaleSize(10),
   },
   billValue: {
-    fontSize: 16,
+    fontSize: scaleFont(16),
     fontWeight: '600',
     color: '#333',
+    flex: 1,
+    textAlign: 'right',
   },
   billTotalLabel: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '700',
     color: '#000',
+    flex: 1,
+    flexWrap: 'wrap',
+    marginRight: scaleSize(10),
   },
   billTotalValue: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '700',
     color: '#000',
+    flex: 1,
+    textAlign: 'right',
   },
   statusBadge: {
     backgroundColor: '#E5E7EB',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 20,
+    paddingVertical: scaleVertical(12),
+    paddingHorizontal: scaleSize(24),
+    borderRadius: scaleSize(20),
     alignSelf: 'center',
-    marginTop: 16,
-    minWidth: 120,
+    marginTop: scaleVertical(16),
+    minWidth: scaleSize(120),
     alignItems: 'center',
   },
   statusText: {
-    fontSize: 14,
+    fontSize: scaleFont(14),
     fontWeight: '600',
     color: '#111',
     textTransform: 'capitalize',

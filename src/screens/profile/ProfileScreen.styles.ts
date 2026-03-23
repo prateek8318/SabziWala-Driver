@@ -1,4 +1,14 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+// Responsive scaling functions
+const scaleWidth = (size: number) => (size / 375) * width;
+const scaleHeight = (size: number) => (size / 812) * height;
+const scaleFont = (size: number) => {
+  const scaleFactor = Math.min(width / 375, height / 812);
+  return size * scaleFactor;
+};
 
 export default StyleSheet.create({
   container: {
@@ -7,41 +17,41 @@ export default StyleSheet.create({
   },
 
   content: {
-    padding: 20,
+    padding: scaleWidth(20),
   },
 
   avatarContainer: {
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: scaleHeight(20),
   },
 
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 45,
+    width: scaleWidth(80),
+    height: scaleWidth(80),
+    borderRadius: scaleWidth(45),
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   avatarImg: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scaleWidth(80),
+    height: scaleWidth(80),
+    borderRadius: scaleWidth(40),
   },
 
   editText: {
-    marginTop: 8,
+    marginTop: scaleHeight(8),
     color: '#000',
-    fontSize: 18,
+    fontSize: scaleFont(18),
   },
 
   menu: {
-    marginTop: 10,
+    marginTop: scaleHeight(10),
   },
 
   menuItem: {
-    height: 56,
-    borderRadius: 10,
+    height: scaleHeight(56),
+    borderRadius: scaleWidth(10),
     borderWidth: 1,
     borderColor: '#EDEDED',
     shadowColor: '#000',
@@ -53,46 +63,46 @@ export default StyleSheet.create({
     shadowRadius: 2,
     
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: scaleWidth(16),
+    marginBottom: scaleHeight(12),
   },
 
   menuText: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     color: '#000',
   },
 
   logout: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 52,
-    paddingHorizontal: 10,
+    marginTop: scaleHeight(52),
+    paddingHorizontal: scaleWidth(10),
     borderWidth: 1,
     borderColor: '#EDEDED',
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: scaleWidth(10),
+    paddingVertical: scaleHeight(12),
   },
 
   logoutIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: scaleWidth(32),
+    height: scaleWidth(32),
+    borderRadius: scaleWidth(16),
     
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: scaleWidth(10),
    
   },
 
   logoutIconImg: {
-    width: 22,
-    height: 22,
+    width: scaleWidth(22),
+    height: scaleWidth(22),
     
   },
 
   logoutText: {
     color: '#000',
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '500',
   },
 
@@ -131,48 +141,48 @@ export default StyleSheet.create({
 
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: scaleWidth(16),
+    padding: scaleWidth(24),
     width: '95%',
-    maxWidth: 340,
+    maxWidth: scaleWidth(340),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: scaleHeight(10),
     },
     shadowOpacity: 0.25,
-    shadowRadius: 15,
+    shadowRadius: scaleWidth(15),
     elevation: 20,
     zIndex: 1000,
   },
 
   modalTitle: {
-    fontSize: 20,
+    fontSize: scaleFont(20),
     fontWeight: '600',
     color: '#000',
-    marginBottom: 12,
+    marginBottom: scaleHeight(12),
   },
 
   modalMessage: {
-    fontSize: 24,
-    padding: 10,
+    fontSize: scaleFont(24),
+    padding: scaleWidth(10),
     color: '#000',
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: scaleHeight(28),
   },
 
   modalButtons: {
     flexDirection: 'row',
     width: '100%',
-    gap: 12,
+    gap: scaleWidth(12),
   },
 
   modalButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 8,
+    paddingVertical: scaleHeight(16),
+    borderRadius: scaleWidth(8),
     alignItems: 'center',
   },
 
@@ -180,12 +190,12 @@ export default StyleSheet.create({
     backgroundColor: '#086B48',
     borderWidth: 2,
     borderColor: '#086B48',
-    borderRadius: 30,
+    borderRadius: scaleWidth(30),
     
   },
 
   cancelButtonText: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '500',
     color: '#fff',
   },
@@ -193,11 +203,11 @@ export default StyleSheet.create({
   confirmButton: {
     borderWidth: 2,
     borderColor: '#086B48',
-    borderRadius: 30,
+    borderRadius: scaleWidth(30),
   },
 
   confirmButtonText: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '500',
     color: '#086B48',
   },

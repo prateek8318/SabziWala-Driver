@@ -5,8 +5,10 @@ import LoginScreen from '../screens/auth/login/LoginScreen';
 import OTPScreen from '../screens/auth/otp/OTPScreen';
 import RegisterScreen from '../screens/auth/registration/RegisterScreen';
 import RegistrationSubmittedScreen from '../screens/auth/registration/RegistrationSubmittedScreen';
+import TermsConditionsScreen from '../screens/profile/terms/TermsConditionsScreen';
+import PrivacyPolicyScreen from '../screens/profile/privacy/PrivacyPolicyScreen';
 
-type AuthScreen = 'landing' | 'login' | 'otp' | 'register' | 'submitted';
+type AuthScreen = 'landing' | 'login' | 'otp' | 'register' | 'submitted' | 'terms' | 'privacy';
 
 interface AuthNavigatorProps {
   onLoginSuccess: () => void;
@@ -22,6 +24,14 @@ const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onLoginSuccess }) => {
 
   const handleRegisterPress = () => {
     setCurrentScreen('register');
+  };
+
+  const handleTermsPress = () => {
+    setCurrentScreen('terms');
+  };
+
+  const handlePrivacyPress = () => {
+    setCurrentScreen('privacy');
   };
 
   const handleSendOTP = (phone: string) => {
@@ -70,6 +80,8 @@ const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onLoginSuccess }) => {
             onSendOTP={handleSendOTP}
             onBackPress={handleBackPress}
             onNavigateToRegister={handleRegisterPress}
+            onNavigateToTerms={handleTermsPress}
+            onNavigateToPrivacy={handlePrivacyPress}
           />
         );
       case 'otp':
@@ -93,6 +105,26 @@ const AuthNavigator: React.FC<AuthNavigatorProps> = ({ onLoginSuccess }) => {
         return (
           <RegistrationSubmittedScreen
             onOkayPress={handleOkayPress}
+          />
+        );
+      case 'terms':
+        return (
+          <TermsConditionsScreen
+            onNavigate={(screen: string) => {
+              if (screen === 'profile') {
+                setCurrentScreen('login');
+              }
+            }}
+          />
+        );
+      case 'privacy':
+        return (
+          <PrivacyPolicyScreen
+            onNavigate={(screen: string) => {
+              if (screen === 'profile') {
+                setCurrentScreen('login');
+              }
+            }}
           />
         );
       default:

@@ -42,7 +42,9 @@ const OrderNotification: React.FC<OrderNotificationProps> = ({
 
   useEffect(() => {
     // Register callback for new orders
+    console.log('🔔 Registering order callback...');
     socketService.onNewOrder((orderData: OrderData) => {
+      console.log('🔔 Order callback triggered with data:', orderData);
       setOrder(orderData);
       setTimeLeft(orderData.timerSeconds);
       playNotificationSound(); // Play sound when order arrives

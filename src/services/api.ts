@@ -1,19 +1,29 @@
-///6.11.25
 // src/services/api.ts
 import axios, { AxiosResponse } from 'axios';
 import storage from './storage';
 import { SOSRequest, SOSApiResponse } from '../types/sos';
 import { SOSSettingsResponse } from '../types/sos-settings';
 import { ReportIssueResponse } from '../types/report-issue';
-import { PolicyResponse } from '../types/policies';
+import { PolicyResponse, CMSResponse } from '../types/policies';
+import { 
+  DriverStatusResponse, 
+  OrderStatusResponse, 
+  LocationUpdateResponse,
+  DriverStatusRequest,
+  DriverBlockStatusRequest,
+  OrderStatusRequest,
+  OrderLocationUpdateRequest,
+  OrderStatus,
+  LocationStatus
+} from '../types/driver-status';
 
 
 
 // -------------------------------------------------
 // 1. Base URL (Driver API - Production)
-// const BASE_URL = 'http://192.168.1.21:7006/api/';
+//  const BASE_URL = 'http://192.168.1.22:7006/api/';
  const BASE_URL = 'http://159.89.146.245:5010/api/';
-// export const IMAGE_BASE_URL = 'http://192.168.1.21:7006/public/';
+// export const IMAGE_BASE_URL = 'http://192.168.1.21:7006/';
  export const IMAGE_BASE_URL = 'http://159.89.146.245:5010/public/';
 
 // -------------------------------------------------
@@ -167,9 +177,9 @@ export const ApiService = {
 
   updateOrderStatus: async (
     orderId: string,
-    status: 'cancelled' | 'accepted' | 'delivered' | 'shipped'
-  ) => {
-    return await api.patch(`driver/order/${orderId}`, { status });
+    status: 'cancelled' | 'accepted' | 'delivered' | 'shipped' | 'running'
+  ): Promise<AxiosResponse<OrderStatusResponse>> => {
+    return await api.patch(`driver/order/${orderId}`, { status } as OrderStatusRequest);
   },
 
   // ---- ORDER TIMER ----
@@ -201,8 +211,27 @@ export const ApiService = {
   },
 
   // ---- DRIVER STATUS MANAGEMENT ----
-  toggleDriverStatus: async (driverId: string, status: boolean) => {
-    return await api.patch(`driver/status/${driverId}`, { status });
+  toggleDriverStatus: async (driverId: string, status: boolean): Promise<AxiosResponse<DriverStatusResponse>> => {
+    return await api.patch(`driver/status/${driverId}`, { status } as DriverStatusRequest);
+  },
+
+  // ---- DRIVER BLOCK STATUS MANAGEMENT ----
+  toggleDriverBlockStatus: async (driverId: string, status: boolean): Promise<AxiosResponse<DriverStatusResponse>> => {
+    return await api.patch(`driver/block/status/${driverId}`, { status } as DriverBlockStatusRequest);
+  },
+
+  // ---- ORDER LOCATION + STATUS UPDATE ----
+  updateOrderLocationAndStatus: async (
+    orderId: string,
+    latitude: number,
+    longitude: number,
+    status: LocationStatus
+  ): Promise<AxiosResponse<LocationUpdateResponse>> => {
+    return await api.patch(`driver/order/${orderId}/location`, { 
+      latitude, 
+      longitude, 
+      status 
+    } as OrderLocationUpdateRequest);
   },
 
   // ---- DRIVER FORGOT PASSWORD ----
@@ -316,6 +345,13 @@ export const ApiService = {
   // GET /api/driver/about-us
   getAboutUs: async (): Promise<AxiosResponse<PolicyResponse>> => {
     return await api.get('driver/about-us');
+  },
+
+  // ---- GENERAL CMS CONTENT ----
+  // GET /api/driver/cms
+  getCMSContent: async (contentType?: string): Promise<AxiosResponse<CMSResponse>> => {
+    const url = contentType ? `driver/cms?contentType=${contentType}` : 'driver/cms';
+    return await api.get(url);
   },
 };
 
