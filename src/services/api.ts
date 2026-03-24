@@ -5,6 +5,14 @@ import { SOSRequest, SOSApiResponse } from '../types/sos';
 import { SOSSettingsResponse } from '../types/sos-settings';
 import { ReportIssueResponse } from '../types/report-issue';
 import { PolicyResponse, CMSResponse } from '../types/policies';
+import {
+  QRGenerateRequest,
+  QRGenerateResponse,
+  CashCollectionRequest,
+  CashCollectionResponse,
+  RazorpayWebhookPayload,
+  WebhookResponse
+} from '../types/payment';
 import { 
   DriverStatusResponse, 
   OrderStatusResponse, 
@@ -21,8 +29,8 @@ import {
 
 // -------------------------------------------------
 // 1. Base URL (Driver API - Production)
-//  const BASE_URL = 'http://192.168.1.22:7006/api/';
- const BASE_URL = 'http://159.89.146.245:5010/api/';
+const BASE_URL = 'http://192.168.1.23:7006/api/';
+//  const BASE_URL = 'http://159.89.146.245:5010/api/';
 // export const IMAGE_BASE_URL = 'http://192.168.1.21:7006/';
  export const IMAGE_BASE_URL = 'http://159.89.146.245:5010/public/';
 
@@ -177,15 +185,20 @@ export const ApiService = {
 
   updateOrderStatus: async (
     orderId: string,
-    status: 'cancelled' | 'accepted' | 'delivered' | 'shipped' | 'running'
+    status: string
   ): Promise<AxiosResponse<OrderStatusResponse>> => {
-    return await api.patch(`driver/order/${orderId}`, { status } as OrderStatusRequest);
+    return await api.patch(`driver/order/${orderId}`, { status });
   },
 
   // ---- ORDER TIMER ----
   // GET /api/driver/order/:orderId/timer
   getOrderTimer: async (orderId: string) => {
     return await api.get(`driver/order/${orderId}/timer`);
+  },
+
+  // PATCH /api/driver/order/:orderId/timer (used to mark order as shipped/on the way)
+  markOrderAsShipped: async (orderId: string) => {
+    return await api.patch(`driver/order/${orderId}/timer`);
   },
 
   // ---- DRIVER LOCATION ----
@@ -352,6 +365,22 @@ export const ApiService = {
   getCMSContent: async (contentType?: string): Promise<AxiosResponse<CMSResponse>> => {
     const url = contentType ? `driver/cms?contentType=${contentType}` : 'driver/cms';
     return await api.get(url);
+  },
+
+  // ---- PAYMENT APIS ----
+  // Generate QR Code for Payment
+  generateQRCode: async (data: QRGenerateRequest): Promise<AxiosResponse<QRGenerateResponse>> => {
+    return await api.post('driver/payments/qr/generate', data);
+  },
+
+  // Mark Cash as Collected
+  markCashCollected: async (data: CashCollectionRequest): Promise<AxiosResponse<CashCollectionResponse>> => {
+    return await api.post('driver/payments/cash/mark-collected', data);
+  },
+
+  // Razorpay Webhook Handler
+  handleRazorpayWebhook: async (payload: RazorpayWebhookPayload): Promise<AxiosResponse<WebhookResponse>> => {
+    return await api.post('driver/payments/webhook', payload);
   },
 };
 

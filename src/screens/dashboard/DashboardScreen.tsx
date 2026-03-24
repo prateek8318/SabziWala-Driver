@@ -1,18 +1,20 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, PanResponder, Animated, Linking, Alert, Modal, SafeAreaView } from 'react-native';
+import { LinearGradient } from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
-import BottomNavigation from '../../components/BottomNavigation';
-import OrderNotification from '../../components/OrderNotification';
-import styles from './DashboardScreen.styles';
+import GlobalHeader from '../../components/GlobalHeader';
+import PaymentModal from '../../components/PaymentModal';
 import { ApiService, IMAGE_BASE_URL } from '../../services/api';
 import socketService from '../../services/socketService';
 import storage from '../../services/storage';
 import qrScannerService from '../../services/qrScannerService';
 import NotificationScreen from '../notifications/NotificationScreen';
+import OrderNotification from '../../components/OrderNotification';
+import BottomNavigation from '../../components/BottomNavigation';
 import Toast from 'react-native-toast-message';
 import { playNotificationSound } from '../../utils/notificationSound';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import styles from './DashboardScreen.styles';
 
 interface DashboardScreenProps {
   onLogout: () => void;
@@ -234,6 +236,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   const [orderTimers, setOrderTimers] = useState<Record<string, { remaining: number; total: number }>>({});
   const [storedOrderTimers, setStoredOrderTimers] = useState<Record<string, { startedAt: number; total: number }>>({});
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [imageLoadErrors, setImageLoadErrors] = useState<{ [key: string]: number }>({});
   const timerIntervalsRef = useRef<Record<string, any>>({});
   const autoRefreshIntervalRef = useRef<any>(null);
@@ -492,7 +495,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       s === 'ongoing' ||
       s === 'inprogress' ||
       s === 'in_progress' ||
-      s === 'processing'
+      s === 'processing' ||
+      s === 'pickup_confirmed' ||
+      s === 'picked_up' ||
+      s === 'on_the_way'
     );
   };
 
@@ -590,10 +596,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     try {
       setOrdersLoading(true);
 
-      const orderType = orderTab === 'new' ? 'new' : 'ongoing';
+      // Try to fetch ongoing orders first
       console.log('=== DASHBOARD SCREEN ===');
-      console.log(`Fetching orders with type: ${orderType}`);
-      const response = await ApiService.getDriverOrders(orderType);
+      console.log(`Fetching orders with type: ongoing`);
+      
+      let response;
+      try {
+        response = await ApiService.getDriverOrders('ongoing');
+      } catch (ongoingError) {
+        console.log('Ongoing orders failed, fetching all orders instead');
+        // If ongoing fails, fetch all orders
+        response = await ApiService.getDriverOrders('all');
+      }
 
       console.log('API Response:', response.data);
       
@@ -611,10 +625,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
           });
         });
         
-        const filtered =
-          orderType === 'new' ? orders.filter(isNew) : orders.filter(isOngoing);
+        // Filter based on current tab
+        const filtered = orderTab === 'new' ? orders.filter(isNew) : orders.filter(isOngoing);
         
-        console.log(`Filtered ${orderType} orders:`, filtered);
+        console.log(`Filtered ${orderTab} orders:`, filtered);
 
         if (orderTab === 'new') {
           // Check for new orders before updating
@@ -630,20 +644,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         }
       }
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        if (orderTab === 'new') {
-          setNewOrders([]);
-          setPreviousNewOrdersCount(0);
-        } else {
-          setOngoingOrders([]);
-        }
+      console.log('=== FETCH ORDERS ERROR ===');
+      console.log('Error:', error);
+      console.log('Error response:', error.response?.data);
+      
+      if (orderTab === 'new') {
+        setNewOrders([]);
+        setPreviousNewOrdersCount(0);
       } else {
-        if (orderTab === 'new') {
-          setNewOrders([]);
-          setPreviousNewOrdersCount(0);
-        } else {
-          setOngoingOrders([]);
-        }
+        setOngoingOrders([]);
       }
     } finally {
       setOrdersLoading(false);
@@ -980,94 +989,40 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
       
       if (!apiOrderId) throw new Error('Order ID not found');
 
-      if (status === 'Delivered') {
-        setShowStatusModal(false);
-        setSelectedOrder(null);
-        onNavigate(`deliveryImage:${apiOrderId}`);
-        return;
-      }
-
-      // COD payment: modal me "Payment" dabane par payment scanner modal open hona chahiye.
       if (status === 'Payment') {
         setShowStatusModal(false);
         setShowQRModal(true);
         return;
       }
 
+      // For Delivered status, navigate to delivery image screen first
+      if (status === 'Delivered') {
+        setShowStatusModal(false);
+        onNavigate(`deliveryImage:${apiOrderId}`);
+        return;
+      }
+
+      let payloadStatus = '';
+      if (status === 'On the way') {
+        payloadStatus = 'on_the_way';
+      } else if (status === 'Pickup Confirmed') {
+        payloadStatus = 'pickup_confirmed';
+      } else if (status === 'Accepted') {
+        payloadStatus = 'accepted';
+      } else if (status === 'Cancelled') {
+        payloadStatus = 'cancelled';
+      } else {
+        payloadStatus = 'accepted';
+      }
+
+      let response: any = await ApiService.updateOrderStatus(apiOrderId, payloadStatus);
+
       const isApiSuccess = (resp: any) => {
         const hasStatus = Boolean(resp?.data?.status);
         const hasSuccess = Boolean(resp?.data?.success);
         const hasStatusCode = resp?.status === 200;
-        
-        console.log('=== API SUCCESS VALIDATION ===');
-        console.log('Response data:', resp?.data);
-        console.log('Response status:', resp?.status);
-        console.log('Has data.status:', hasStatus);
-        console.log('Has data.success:', hasSuccess);
-        console.log('Has status 200:', hasStatusCode);
-        console.log('Final result:', hasStatus || hasSuccess || hasStatusCode);
-        
         return hasStatus || hasSuccess || hasStatusCode;
       };
-
-      let response: any = null;
-      if (status === 'On the way') {
-        // Check if order has correct status for "On the way" action
-        const currentOrderStatus = normalizeOrderStatus(selectedOrder);
-        console.log('Current order status:', currentOrderStatus);
-        
-        if (currentOrderStatus !== 'processing' && currentOrderStatus !== 'accepted') {
-          Toast.show({
-            type: 'error',
-            text1: 'Invalid Status',
-            text2: `Order must be accepted first. Current status: ${currentOrderStatus}`,
-          });
-          return;
-        }
-        
-        console.log('Calling updateOrderStatus with shipped status for order ID:', apiOrderId);
-        try {
-          response = await ApiService.updateOrderStatus(apiOrderId, 'shipped');
-          console.log('updateOrderStatus response:', response);
-        } catch (error: any) {
-          console.log('updateOrderStatus error:', error);
-          console.log('Error response:', error.response);
-          console.log('Error response data:', error.response?.data);
-          throw error;
-        }
-      } else if (status === 'Pickup Confirmed') {
-        // Location endpoint ke liye latitude/longitude chahiye.
-        // Dashboard orders me pickup.lat/long available ho sakta hai; warna safe fallback use karte hain.
-        const latRaw =
-          selectedOrder?.pickup?.lat ??
-          selectedOrder?.pickup?.latitude ??
-          selectedOrder?.pickupLat ??
-          selectedOrder?.lat;
-        const lngRaw =
-          selectedOrder?.pickup?.long ??
-          selectedOrder?.pickup?.lng ??
-          selectedOrder?.pickup?.longitude ??
-          selectedOrder?.pickupLong ??
-          selectedOrder?.lng;
-
-        let latitude = typeof latRaw === 'number' ? latRaw : Number(latRaw);
-        let longitude = typeof lngRaw === 'number' ? lngRaw : Number(lngRaw);
-
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          latitude = 28.6139;
-          longitude = 77.2090;
-          Toast.show({
-            type: 'info',
-            text1: 'Location fallback',
-            text2: 'Default pickup coordinates used (update with GPS later)',
-          });
-        }
-
-        response = await ApiService.updateOrderLocationAndStatus(apiOrderId, latitude, longitude, 'picked_up');
-      } else {
-        // Fallback: backend accepted status
-        response = await ApiService.updateOrderStatus(apiOrderId, 'accepted');
-      }
 
       if (!isApiSuccess(response)) {
         Toast.show({
@@ -1097,9 +1052,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
     } catch (error: any) {
       console.log('=== STATUS UPDATE ERROR ===');
       console.log('Error details:', error);
-      console.log('Error response:', error.response);
-      console.log('Error response data:', error.response?.data);
-      console.log('Error message:', error.message);
       
       Toast.show({
         type: 'error',
@@ -1180,7 +1132,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
 
   const handlePaymentScanner = async (order: any) => {
     setSelectedOrder(order);
-    setShowQRModal(true);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentComplete = (method: 'qr' | 'cash') => {
+    console.log(`Payment completed via ${method}`);
+    setShowPaymentModal(false);
+    setSelectedOrder(null);
+    // Refresh orders to show updated status
+    fetchOrders();
   };
 
   const handleOpenQRScanner = async () => {
@@ -1231,26 +1191,32 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
   };
 
   const getCurrentStatus = (order: any): string => {
-    if (!order) return 'Pickup Confirmed';
+    if (!order) return 'Update Status';
     const orderId = order._id || order.orderId;
     if (orderStatuses[orderId]) {
       return orderStatuses[orderId];
     }
     // Map API status to UI status
-    const apiStatus = order.orderStatus || order.status || '';
-    if (apiStatus === 'running' || apiStatus === 'accepted') return 'Pickup Confirmed';
+    const apiStatus = (order.orderStatus || order.status || '').toLowerCase();
+    
+    if (apiStatus === 'cancelled') return 'Cancelled';
+    if (apiStatus === 'accepted' || apiStatus === 'processing') return 'Pickup Confirmed';
+    if (apiStatus === 'pickup_confirmed' || apiStatus === 'picked_up') return 'On the way';
+    if (apiStatus === 'on_the_way') return 'Delivered';
     if (apiStatus === 'delivered') return 'Delivered';
-    return 'Pickup Confirmed'; // Default
+    if (apiStatus === 'running') return 'Pickup Confirmed'; // Legacy fallback
+    
+    return 'Update Status'; // Default fallback
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <OrderNotification
-        onAcceptOrder={(orderId) => {
+        onAcceptOrder={(orderId: string) => {
           acceptOrder(orderId);
           fetchOrders();
         }}
-        onRejectOrder={(orderId) => {
+        onRejectOrder={(orderId: string) => {
           cancelOrder(orderId);
           fetchOrders();
         }}
@@ -1538,7 +1504,24 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                       {/* PAYMENT MODE */}
                       <View style={styles.orderValueSection}>
                         <Text style={styles.orderValueLabel}>Payment Mode</Text>
-                        <Text style={styles.orderValueAmount}>{getPaymentModeText(order.paymentMode ?? order.payment_type)}</Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={styles.orderValueAmount}>{getPaymentModeText(order.paymentMode ?? order.payment_type)}</Text>
+                          {/* PAYMENT SCANNER BUTTON - Only for COD orders with pending payment */}
+                          {isCODPayment(order) && (order?.paymentStatus || (isCODPayment(order) ? 'pending' : 'paid')) === 'pending' && (
+                            <TouchableOpacity
+                              style={{
+                                marginTop: 4,
+                                backgroundColor: '#086B48',
+                                paddingVertical: 4,
+                                paddingHorizontal: 8,
+                                borderRadius: 4,
+                              }}
+                              onPress={() => handlePaymentScanner(order)}
+                            >
+                              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>Payment Scanner</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
 
                       {/* PRODUCT DETAILS LINK */}
@@ -1549,22 +1532,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
                         <Text style={styles.productLink}>Product Details</Text>
                       </TouchableOpacity>
 
-                      {/* PRIMARY ACTION BUTTON */}
-                      {isCODPayment(order) && getCurrentStatus(order) === 'Delivered' ? (
-                        <TouchableOpacity
-                          style={styles.updateButtonFull}
-                          onPress={() => handlePaymentScanner(order)}
-                        >
-                          <Text style={styles.updateButtonText}>Payment Scanner</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity
-                          style={styles.updateButtonFull}
-                          onPress={() => handleUpdateStatus(order)}
-                        >
-                          <Text style={styles.updateButtonText}>{getCurrentStatus(order)}</Text>
-                        </TouchableOpacity>
-                      )}
+                      {/* PRIMARY ACTION BUTTON - Always visible for status update */}
+                      <TouchableOpacity
+                        style={[styles.updateButtonFull, { backgroundColor: '#086B48', borderWidth: 2, borderColor: '#065538' }]}
+                        onPress={() => handleUpdateStatus(order)}
+                      >
+                        <Text style={[styles.updateButtonText, { fontWeight: 'bold', fontSize: 16 }]}>{getCurrentStatus(order)}</Text>
+                      </TouchableOpacity>
 
                       {/* REPORT ISSUE LINK */}
                       <TouchableOpacity
@@ -1605,64 +1579,53 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         <View style={styles.modalOverlay}>
           <View style={styles.statusModalContent}>
             <Text style={styles.statusModalTitle}>Update Status</Text>
-            <TouchableOpacity
-              style={[
-                styles.statusOption,
-                getCurrentStatus(selectedOrder || {}) === 'Pickup Confirmed' && styles.statusOptionActive
-              ]}
-              onPress={() => handleStatusSelect('Pickup Confirmed')}
-            >
-              <Text style={[
-                styles.statusOptionText,
-                getCurrentStatus(selectedOrder || {}) === 'Pickup Confirmed' && styles.statusOptionTextActive
-              ]}>
-                Pickup Confirmed
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.statusOption,
-                getCurrentStatus(selectedOrder || {}) === 'On the way' && styles.statusOptionActive
-              ]}
-              onPress={() => handleStatusSelect('On the way')}
-            >
-              <Text style={[
-                styles.statusOptionText,
-                getCurrentStatus(selectedOrder || {}) === 'On the way' && styles.statusOptionTextActive
-              ]}>
-                On the way
-              </Text>
-            </TouchableOpacity>
-            {isCODPayment(selectedOrder) && (
-              <TouchableOpacity
-                style={[
-                  styles.statusOption,
-                  getCurrentStatus(selectedOrder || {}) === 'Payment' && styles.statusOptionActive
-                ]}
-                onPress={() => handleStatusSelect('Payment')}
-              >
-                <Text style={[
-                  styles.statusOptionText,
-                  getCurrentStatus(selectedOrder || {}) === 'Payment' && styles.statusOptionTextActive
-                ]}>
-                  Payment
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.statusOption,
-                getCurrentStatus(selectedOrder || {}) === 'Delivered' && styles.statusOptionActive
-              ]}
-              onPress={() => handleStatusSelect('Delivered')}
-            >
-              <Text style={[
-                styles.statusOptionText,
-                getCurrentStatus(selectedOrder || {}) === 'Delivered' && styles.statusOptionTextActive
-              ]}>
-                Delivered
-              </Text>
-            </TouchableOpacity>
+            {(() => {
+              const currentUIStatus = getCurrentStatus(selectedOrder || {});
+              const apiStatus = (selectedOrder?.orderStatus || selectedOrder?.status || '').toLowerCase();
+              
+              // Determine actual current status vs next action
+              const isAccepted = apiStatus === 'accepted' || apiStatus === 'processing';
+              const isPickupConfirmed = apiStatus === 'pickup_confirmed' || apiStatus === 'picked_up';
+              const isOnTheWay = apiStatus === 'on_the_way';
+              const isDelivered = apiStatus === 'delivered';
+              
+              // Check if payment scanner already exists
+              const hasPaymentScanner = isCODPayment(selectedOrder) && (selectedOrder?.paymentStatus || (isCODPayment(selectedOrder) ? 'pending' : 'paid')) === 'pending';
+
+              return (
+                <>
+                  {/* Only show Pickup Confirmed if order is accepted */}
+                  {isAccepted && (
+                    <TouchableOpacity
+                      style={[styles.statusOption, styles.statusOptionActive]}
+                      onPress={() => handleStatusSelect('Pickup Confirmed')}
+                    >
+                      <Text style={[styles.statusOptionText, styles.statusOptionTextActive]}>Pickup Confirmed</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {/* Only show On the way if order is pickup confirmed */}
+                  {isPickupConfirmed && (
+                    <TouchableOpacity
+                      style={[styles.statusOption, styles.statusOptionActive]}
+                      onPress={() => handleStatusSelect('On the way')}
+                    >
+                      <Text style={[styles.statusOptionText, styles.statusOptionTextActive]}>On the way</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {/* Always show Delivered if order is on the way */}
+                  {isOnTheWay && (
+                    <TouchableOpacity
+                      style={[styles.statusOption, styles.statusOptionActive]}
+                      onPress={() => handleStatusSelect('Delivered')}
+                    >
+                      <Text style={[styles.statusOptionText, styles.statusOptionTextActive]}>Delivered</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              );
+            })()}
             <TouchableOpacity
               style={styles.statusModalCancel}
               onPress={() => {
@@ -1676,52 +1639,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ onLogout, onNavigate 
         </View>
       </Modal>
 
-      {/* Payment Scanner QR Modal */}
-      <Modal
-        visible={showQRModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => {
-          setShowQRModal(false);
-          setSelectedOrder(null);
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.qrModalContent}>
-            <Text style={styles.qrModalTitle}>Payment Scanner</Text>
-
-            {selectedOrder && (
-              <View style={styles.qrOrderInfo}>
-                <Text style={styles.qrOrderText}>Order ID: {selectedOrder._id || selectedOrder.orderId}</Text>
-                <Text style={styles.qrAmountText}>₹{selectedOrder.totalAmount || 0}</Text>
-                <Text style={styles.qrOrderText}>Customer: {selectedOrder.delivery?.name || 'N/A'}</Text>
-              </View>
-            )}
-
-            <View style={styles.qrCodeContainer}>
-              <Text style={styles.qrCodePlaceholder}>QR Code Scanner</Text>
-              <Text style={[styles.qrCodePlaceholder, { fontSize: 12 }]}>Scan customer's payment QR code</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.qrCloseButton}
-              onPress={handleOpenQRScanner}
-            >
-              <Text style={styles.qrCloseButtonText}>Open Scanner</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.qrCloseButton, { backgroundColor: '#666', marginTop: 10 }]}
-              onPress={() => {
-                setShowQRModal(false);
-                setSelectedOrder(null);
-              }}
-            >
-              <Text style={styles.qrCloseButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Payment Modal */}
+      {selectedOrder && (
+        <PaymentModal
+          visible={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedOrder(null);
+          }}
+          orderId={selectedOrder._id || selectedOrder.orderId}
+          orderAmount={selectedOrder.totalAmount || selectedOrder.grandTotal || 0}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
     </View>
   );
 };

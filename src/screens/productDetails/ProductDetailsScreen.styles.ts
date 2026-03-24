@@ -62,14 +62,17 @@ export default StyleSheet.create({
     paddingVertical: scaleVertical(6),
     borderRadius: scaleSize(12),
     alignSelf: 'flex-start',
-    width: scaleSize(80), // Fixed width to prevent being pushed out
+    minWidth: scaleSize(80),
+    maxWidth: scaleSize(120), // Add maxWidth to prevent overflow on large screens
     alignItems: 'center',
+    flexShrink: 1, // Allow chip to shrink if needed
   },
   statusChipText: {
-    fontSize: scaleFont(13),
+    fontSize: scaleFont(12), // Reduced font size for better fit
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
+    flexShrink: 1, // Allow text to shrink if needed
   },
   orderNumber: {
     fontSize: scaleFont(18),

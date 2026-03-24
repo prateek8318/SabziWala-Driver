@@ -160,7 +160,7 @@ export const processOrderStatusUpdate = async (
         break;
 
       case 'deliver':
-        if (order.status !== 'shipped') {
+        if (!['shipped', 'processing', 'on_the_way', 'accepted'].includes(order.status)) {
           throw new Error(`Cannot deliver order with status: ${order.status}`);
         }
         response = await apiService.updateOrderStatus(order._id, 'delivered');

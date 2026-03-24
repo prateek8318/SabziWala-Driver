@@ -896,4 +896,18 @@ updateButtonFull: {
     fontWeight: '500',
   },
 
+  // Payment Status Styles
+  paidStatus: {
+    color: '#28a745',
+    fontWeight: '600',
+  },
+  failedStatus: {
+    color: '#dc3545',
+    fontWeight: '600',
+  },
+  pendingStatus: {
+    color: '#ffc107',
+    fontWeight: '600',
+  },
+
 });

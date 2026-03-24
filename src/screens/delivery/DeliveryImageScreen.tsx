@@ -4,6 +4,7 @@ import { launchCamera, MediaType, ImagePickerResponse } from 'react-native-image
 import GlobalHeader from '../../components/GlobalHeader';
 import styles from './DeliveryImageScreen.styles';
 import { ApiService } from '../../services/api';
+import { markOrderAsDelivered } from '../../services/orderStatusService';
 
 interface DeliveryImageScreenProps {
   orderId: string;
@@ -66,13 +67,47 @@ const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNa
     
     try {
       setUploading(true);
+      
+      // First, check current order status
+      const orderCheck = await ApiService.getDriverOrderDetails(orderId);
+      const currentOrder = orderCheck.data?.order || orderCheck.data;
+      const currentStatus = currentOrder?.status;
+      
+      console.log('Current order status before delivery:', currentStatus);
+      console.log('API Response structure:', JSON.stringify(orderCheck.data, null, 2));
+      
+      // Validate order status for delivery
+      if (!['shipped', 'processing', 'on_the_way', 'accepted'].includes(currentStatus)) {
+        Alert.alert(
+          'Cannot Deliver Order',
+          `Order must be accepted and on the way before delivery. Current status: ${currentStatus}`,
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+
+      // First, upload the delivery image
+      console.log('Uploading delivery image...');
+      const uploadResponse = await ApiService.upload(`driver/upload-delivery-image/${orderId}`, photoUri, 'deliveryImage');
+      
+      if (!uploadResponse.data.success) {
+        throw new Error(uploadResponse.data.message || 'Failed to upload image');
+      }
+      
+      console.log('Image uploaded successfully');
 
       // First, get order details to find earnings
       const orderResponse = await ApiService.getDriverOrderDetails(orderId);
-      const order = orderResponse.data?.data || orderResponse.data;
+      const order = orderResponse.data?.order || orderResponse.data;
       
-      // Update order status to delivered
-      await ApiService.updateOrderStatus(orderId, 'delivered');
+      // Update order status to delivered using proper flow
+      // First, ensure order is in accepted status (backend requirement)
+      if (currentStatus === 'on_the_way') {
+        console.log('Updating status from on_the_way to accepted for delivery...');
+        await ApiService.updateOrderStatus(orderId, 'accepted');
+      }
+      
+      await markOrderAsDelivered(orderId);
 
       // Calculate earnings from order
       const earning = 
@@ -105,7 +140,21 @@ const DeliveryImageScreen: React.FC<DeliveryImageScreenProps> = ({ orderId, onNa
 
       onNavigate?.(`deliveryCompleted:${orderId}:${encodeURIComponent(photoUri || '')}`);
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to mark delivered');
+      console.log('=== DELIVERY ERROR ===');
+      console.log('Error:', e);
+      console.log('Error response:', e?.response?.data);
+      console.log('Error status:', e?.response?.status);
+      console.log('Order ID:', orderId);
+      
+      // Try to get current order status for debugging
+      try {
+        const orderCheck = await ApiService.getDriverOrderDetails(orderId);
+        console.log('Current order status:', orderCheck.data?.order?.status || orderCheck.data?.status);
+      } catch (checkError) {
+        console.log('Could not check order status:', checkError);
+      }
+      
+      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Failed to mark delivered');
     } finally {
       setUploading(false);
     }

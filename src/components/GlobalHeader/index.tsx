@@ -73,7 +73,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           />
         </TouchableOpacity>
       )}
-      <Text style={[styles.headerTitle, { color: titleColor }]} numberOfLines={1} ellipsizeMode="tail">
+      <Text style={[styles.headerTitle, { color: titleColor }]}>
         {displayTitle}
       </Text>
     </View>
@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     paddingHorizontal: scaleWidth(60), // Ensure title doesn't overlap with back button
-    maxWidth: width - scaleWidth(140), // More restrictive to prevent overflow
   },
 });
 

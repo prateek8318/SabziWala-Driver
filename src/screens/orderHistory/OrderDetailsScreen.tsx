@@ -103,18 +103,6 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
     }
   };
 
-  const handlePaymentScanner = () => {
-    // Handle payment scanner functionality
-    console.log('Payment Scanner clicked');
-    
-    // Show QR code for COD payment
-    if (isCODPayment) {
-      setShowQRCode(!showQRCode); // Toggle QR code display
-    } else {
-      Alert.alert('Info', 'Payment scanner is only available for Cash on Delivery orders');
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.container}>
@@ -419,6 +407,8 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
   const orderValue = orderDetails.grandTotal || orderDetails.totalAmount || orderDetails.amount || 0;
   const isCODPayment = isCOD(orderDetails.paymentMethod || orderDetails.paymentMode || orderDetails.payment);
   const status = orderDetails.status || orderDetails.orderStatus || 'N/A';
+  const paymentStatus = orderDetails.paymentStatus || 'pending';
+  const paymentMethodUsed = orderDetails.paymentMethodUsed;
   const totalKm = orderDetails.totalKm || 0;
   const totalItems = orderDetails.products?.length || 0;
 
@@ -542,40 +532,43 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
             <Text style={styles.infoValue}>{paymentMode}</Text>
           </View>
 
-          {/* Payment Scanner Button - Only for COD */}
-          {isCODPayment && (
-            <TouchableOpacity
-              style={styles.paymentScannerButton}
-              onPress={handlePaymentScanner}
-            >
-              <Text style={styles.paymentScannerText}>Payment Scanner</Text>
-            </TouchableOpacity>
+          {/* Payment Status - Show for all orders */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Payment Status:</Text>
+            <Text style={[
+              styles.infoValue,
+              paymentStatus === 'paid' ? styles.paidStatus : 
+              paymentStatus === 'failed' ? styles.failedStatus : 
+              styles.pendingStatus
+            ]}>
+              {paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)}
+            </Text>
+          </View>
+
+          {/* Payment Method Used - Show if payment is completed */}
+          {paymentMethodUsed && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Payment Method:</Text>
+              <Text style={styles.infoValue}>
+                {paymentMethodUsed === 'cash' ? 'Cash' : 
+                 paymentMethodUsed === 'upi_qr' ? 'UPI QR' : 
+                 paymentMethodUsed}
+              </Text>
+            </View>
           )}
 
-          {/* QR Code Display - Shows below payment scanner button when clicked */}
-          {isCODPayment && showQRCode && (
-            <View style={styles.qrCodeDisplay}>
-              <Text style={styles.qrCodeTitle}>Payment QR Code</Text>
-              <Text style={styles.qrCodeSubtitle}>Order #{orderIdDisplay}</Text>
-              <Text style={styles.qrCodeAmount}>Amount: ₹{orderValue}</Text>
-              
-              {/* Dummy QR Code */}
-              <View style={styles.qrCodeWrapper}>
-                <View style={styles.qrCodePlaceholder}>
-                  <Text style={styles.qrCodePlaceholderText}>QR CODE</Text>
-                  <Text style={styles.qrCodePlaceholderSubtext}>For Payment</Text>
-                </View>
-              </View>
-              
-              <Text style={styles.qrCodeInstruction}>Scan this QR code to collect payment</Text>
-              
-              <TouchableOpacity
-                style={styles.qrCodeHideButton}
-                onPress={() => setShowQRCode(false)}
-              >
-                <Text style={styles.qrCodeHideButtonText}>Hide QR Code</Text>
-              </TouchableOpacity>
-            </View>
+
+          {/* Payment Scanner Button - Only for COD orders with pending payment */}
+          {isCODPayment && paymentStatus === 'pending' && (
+            <TouchableOpacity
+              style={styles.paymentScannerButton}
+              onPress={() => {
+                console.log('Payment Scanner clicked');
+                Alert.alert('Info', 'Payment scanner functionality would be implemented here');
+              }}
+            >
+              <Text style={styles.paymentScannerText}>Collect Payment</Text>
+            </TouchableOpacity>
           )}
 
           {/* Product Details Link */}
@@ -592,6 +585,7 @@ const OrderDetailsScreen: React.FC<OrderDetailsScreenProps> = ({ orderId, onNavi
           </View>
         </View>
       </ScrollView>
+
     </View>
   );
 };

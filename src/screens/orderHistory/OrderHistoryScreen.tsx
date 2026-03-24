@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput, Modal } from 'react-native';
 import GlobalHeader from '../../components/GlobalHeader';
 import BottomNavigation from '../../components/BottomNavigation';
+import PaymentModal from '../../components/PaymentModal';
 import styles from './OrderHistoryScreen.styles';
 import { ApiService } from '../../services/api';
 
@@ -21,6 +22,8 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   // FIX: Single calendar state instead of two separate booleans
   const [showCalendar, setShowCalendar] = useState(false);
@@ -322,6 +325,28 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
     if (onNavigate) onNavigate(`orderDetails:${orderId}`);
   };
 
+  const handlePaymentScanner = (order: any) => {
+    setSelectedOrder(order);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentComplete = (method: 'qr' | 'cash') => {
+    setShowPaymentModal(false);
+    setSelectedOrder(null);
+    fetchOrders();
+  };
+
+  const isCODPayment = (order: any) => {
+    const rawMode = order?.paymentMode ?? order?.payment_type ?? order?.paymentMethod ?? order?.payment;
+    const modeLower = (rawMode ?? '').toString().toLowerCase().trim();
+    return (
+      modeLower === 'cod' ||
+      modeLower === 'cash on delivery' ||
+      modeLower === 'cash_on_delivery' ||
+      (modeLower.includes('cash') && modeLower.includes('delivery'))
+    );
+  };
+
   const getOrderField = (order: any, field: string, fallback: any = 'N/A') =>
     order[field] || fallback;
 
@@ -507,6 +532,20 @@ const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ onLogout, onNav
 
       {/* Calendar Modal */}
       {renderCalendar()}
+
+      {/* Payment Modal */}
+      {selectedOrder && (
+        <PaymentModal
+          visible={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedOrder(null);
+          }}
+          orderId={selectedOrder._id || selectedOrder.orderId || selectedOrder.bookingId}
+          orderAmount={selectedOrder.totalAmount || selectedOrder.grandTotal || 0}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
     </View>
   );
 };

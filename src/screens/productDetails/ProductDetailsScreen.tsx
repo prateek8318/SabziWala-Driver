@@ -320,7 +320,7 @@ const ProductDetailsScreen: React.FC<ProductDetailsScreenProps> = ({ orderId, so
               <Text style={styles.orderDate}>{formatDate(orderDetails.createdAt)}</Text>
             </View>
             <View style={styles.statusChip}>
-              <Text style={styles.statusChipText}>{statusLabel}</Text>
+              <Text style={styles.statusChipText} numberOfLines={1} ellipsizeMode="tail">{statusLabel}</Text>
             </View>
           </View>
 
